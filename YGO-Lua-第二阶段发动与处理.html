@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>YGO Lua · 第二阶段修订版</title>
+<style>
+:root{
+  --bg:#0a1020;--panel:#131e33;--panel2:#18263f;
+  --line:#2a3c5d;--text:#e6eeff;--muted:#a8b9d5;
+  --blue:#86a5ff;--green:#69e2b2;--yellow:#ffd782;--red:#ff9aa8;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:radial-gradient(ellipse at top right,#172750,transparent 50%),var(--bg);
+  color:var(--text);
+  font:15px/1.8 system-ui,"Microsoft YaHei",sans-serif;
+}
+button,input,textarea,select{font:inherit}
+button{
+  cursor:pointer;padding:9px 14px;
+  border:1px solid var(--line);border-radius:9px;
+  background:var(--panel2);color:var(--text);
+}
+button:hover{border-color:var(--blue)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{
+  outline:2px solid var(--blue);outline-offset:3px;
+}
+.primary{background:#486aca;border-color:#6485e6;color:white}
+.shell{display:grid;grid-template-columns:255px minmax(0,1fr);min-height:100vh}
+aside{
+  position:sticky;top:0;height:100vh;overflow:auto;
+  padding:22px 16px;border-right:1px solid var(--line);background:#0c1425;
+}
+.brand{font-size:21px;font-weight:800}
+.subtitle{color:var(--muted);font-size:12px}
+.progressBox{
+  margin:20px 0;padding:13px;background:var(--panel);
+  border:1px solid var(--line);border-radius:12px;
+}
+.progressTitle{display:flex;justify-content:space-between;font-size:13px}
+.progressTrack{
+  height:7px;background:#080d18;border-radius:10px;margin-top:10px;overflow:hidden;
+}
+.progressTrack div{
+  height:100%;background:linear-gradient(90deg,var(--blue),var(--green));
+  transition:width .3s;
+}
+nav{display:grid;gap:7px}
+nav button{
+  display:flex;align-items:center;gap:9px;text-align:left;
+  padding:10px;background:transparent;border-color:transparent;font-size:13px;
+}
+nav button.active{background:#22375e;border-color:#5d7fcc}
+nav .num{color:var(--muted);min-width:21px}
+nav .tick{margin-left:auto;color:var(--green)}
+.new{color:var(--yellow);font-size:11px}
+main{min-width:0;width:100%;max-width:1400px;margin:0 auto;padding:30px}
+.hero{
+  padding:24px;border:1px solid var(--line);border-radius:17px;
+  background:linear-gradient(120deg,#1d3053,#132139);margin-bottom:20px;
+}
+.tag{color:var(--green);font-size:12px;font-weight:700;letter-spacing:.08em}
+h1{margin:8px 0;font-size:29px;line-height:1.4}
+h2{font-size:18px;margin:0 0 14px}
+h3{font-size:15px;margin:16px 0 8px}
+p{margin:9px 0}
+.muted{color:var(--muted)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+.panel{
+  padding:20px;border:1px solid var(--line);background:var(--panel);
+  border-radius:14px;margin-bottom:20px;min-width:0;
+}
+.lessonText{color:#d0def5}
+.lessonText strong{color:white}
+code{
+  color:#a5edcf;background:#0b1526;padding:2px 5px;
+  border-radius:5px;font-family:Consolas,monospace;
+}
+pre{
+  background:#080f1d;color:#d6e5ff;border:1px solid #263958;
+  padding:15px;border-radius:10px;white-space:pre-wrap;
+  overflow-wrap:anywhere;font:14px/1.8 Consolas,monospace;
+}
+.note{
+  padding:12px 14px;border-left:3px solid var(--blue);
+  border-radius:0 8px 8px 0;background:#182943;
+  color:#c5d6f2;font-size:13px;margin:15px 0;
+}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+.visual{
+  min-height:170px;padding:18px;background:#0b1424;
+  border:1px dashed #395277;border-radius:12px;
+}
+.visualTitle{font-weight:700;color:var(--yellow);margin-bottom:12px}
+.object{
+  padding:13px;background:#182943;border:1px solid #3c567e;
+  border-radius:10px;margin-bottom:10px;
+}
+.object b{display:block;color:var(--blue);margin-bottom:5px}
+.fields{display:grid;grid-template-columns:auto 1fr;gap:5px 15px;font-size:13px}
+.fields span:nth-child(odd){color:var(--muted)}
+.stepCount{font-size:12px;color:var(--muted)}
+.caption{padding:12px 0 0;min-height:62px;color:#c8d9f7;font-size:14px}
+.option{width:100%;text-align:left;display:block;margin-top:9px}
+.option.good{border-color:var(--green);background:#173d34}
+.option.bad{border-color:var(--red);background:#412b3b}
+.feedback{min-height:30px;padding-top:12px;font-size:14px}
+.goodText{color:var(--green)}
+.badText{color:var(--red)}
+textarea,input[type=text],select{
+  padding:12px;color:#e6efff;background:#090f1d;
+  border:1px solid #3a5276;border-radius:9px;
+}
+textarea,input[type=text]{width:100%;font:14px/1.8 Consolas,monospace}
+textarea{min-height:390px;resize:vertical;tab-size:4}
+[hidden]{display:none!important}
+details{margin-top:13px}
+summary{cursor:pointer;color:var(--blue)}
+.footerNav{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:25px}
+.badge{color:var(--green);font-size:13px}
+.small{font-size:12px}
+.settings{display:flex;gap:15px;flex-wrap:wrap;align-items:center}
+.players{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:15px 0}
+.phase{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.phase span{padding:5px 10px;border:1px solid var(--line);border-radius:8px;font-size:12px}
+.phase .active{border-color:var(--green);color:var(--green)}
+#labLog{max-height:320px;overflow:auto}
+#storageNotice{font-size:12px;color:var(--yellow)}
+@media(max-width:1100px){.grid{grid-template-columns:1fr}}
+@media(max-width:700px){
+  .shell{display:block}
+  aside{position:static;height:auto;padding:14px}
+  nav{display:flex;overflow:auto}
+  nav button{min-width:180px}
+  .progressBox{margin:12px 0}
+  main{padding:15px}
+  h1{font-size:24px}
+  .hero,.panel{padding:17px}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside>
+  <div class="brand">✦ YGO Lua 学习室</div>
+  <div class="subtitle">先看懂，再动手，最后独立写卡</div>
+  <div class="progressBox">
+    <div class="progressTitle">
+      <span>第二阶段 · 发动篇</span>
+      <strong id="progressText"></strong>
+    </div>
+    <div class="progressTrack"><div id="progressBar"></div></div>
+  </div>
+  <nav id="nav" aria-label="课程目录"></nav>
+  <details>
+    <summary>学习记录</summary>
+    <p class="small muted">
+      修订版单独保存进度。旧版记录不会删除，也不会自动错位继承。
+    </p>
+    <button id="clearProgress">清空本版记录</button>
+  </details>
+  <p id="storageNotice"></p>
+</aside>
+
+<main>
+  <header class="hero">
+    <div class="tag" id="lessonTag"></div>
+    <h1 id="lessonTitle"></h1>
+    <div class="muted" id="lessonGoal"></div>
+  </header>
+
+  <div class="grid">
+    <div>
+      <section class="panel">
+        <h2>① 先理解一个小知识点</h2>
+        <div id="lessonText" class="lessonText"></div>
+        <pre id="example"></pre>
+        <div class="note" id="takeaway"></div>
+      </section>
+
+      <section class="panel">
+        <h2>② 点击观察</h2>
+        <p class="small muted">
+          教学示意：按预设步骤展示关系和状态，不执行任意 Lua。
+        </p>
+        <div class="visual" id="visual"></div>
+        <pre id="stepCode"></pre>
+        <div class="caption" id="stepCaption" aria-live="polite"></div>
+        <div class="actions">
+          <button id="previousStep">← 上一步</button>
+          <button id="nextStep" class="primary">观察下一步 →</button>
+        </div>
+        <div class="stepCount" id="stepCount"></div>
+      </section>
+    </div>
+
+    <div>
+      <section class="panel">
+        <h2>③ 确认你理解了</h2>
+        <p id="question"></p>
+        <div id="options"></div>
+        <div class="feedback" id="quizFeedback" aria-live="polite"></div>
+      </section>
+
+      <section class="panel">
+        <h2>④ 只写一点点</h2>
+        <p id="exercisePrompt"></p>
+        <pre id="exerciseTemplate"></pre>
+        <label for="answerInput" class="small muted" id="inputLabel">填写空缺部分</label>
+        <input id="answerInput" type="text" autocomplete="off" spellcheck="false">
+        <textarea id="codeInput" spellcheck="false" hidden
+          aria-label="完整脚本练习"></textarea>
+
+        <div class="actions">
+          <button class="primary" id="checkAnswer">检查练习</button>
+          <button id="resetAnswer">重新填写</button>
+        </div>
+        <div class="feedback" id="exerciseFeedback" aria-live="polite"></div>
+        <details id="hintDetails">
+          <summary>给我一个提示</summary><p id="exerciseHint"></p>
+        </details>
+        <details id="solutionDetails">
+          <summary>查看参考答案</summary><pre id="exerciseSolution"></pre>
+          <p class="small muted">查看答案不自动完成练习。</p>
+        </details>
+      </section>
+
+      <section class="panel">
+        <h2>本课完成条件</h2>
+        <div id="checklist"></div>
+        <p class="small muted">课程可自由切换。学过旧版可优先看标注“新增”的两课。</p>
+      </section>
+    </div>
+  </div>
+
+  <div class="footerNav">
+    <button id="previousLesson">← 上一课</button>
+    <span class="badge" id="lessonStatus"></span>
+    <button id="nextLesson" class="primary">下一课 →</button>
+  </div>
+
+  <section class="panel">
+    <h2>⑤ 发动流程实验台</h2>
+    <p>固定教学效果：发动后，自己抽1张卡。</p>
+    <div class="note">
+      本实验台独立于上方代码输入框，运行预置教学规则。
+      不模拟完整优先权、连锁响应、卡片离场和裁定。
+      SetCategory 与 SetOperationInfo 都不会实际抽卡。
+    </div>
+
+    <div class="settings">
+      <label>发动玩家
+        <select id="player">
+          <option value="0">玩家0</option>
+          <option value="1">玩家1</option>
+        </select>
+      </label>
+      <label><input id="cannotDraw" type="checkbox">禁止发动玩家抽卡</label>
+      <label><input id="negated" type="checkbox">处理时效果被无效</label>
+    </div>
+
+    <p class="small muted">
+      切换玩家会重置场景；勾选项可在发动之后改变。
+      本场景不演示卡组不足或“发动被无效”的完整规则。
+    </p>
+
+    <div id="phase" class="phase"></div>
+    <div id="players" class="players"></div>
+    <div id="engineState"></div>
+
+    <div class="actions">
+      <button id="initialize">1. 初始化</button>
+      <button id="inspect">2. 仅检查</button>
+      <button id="activate">3. 发动</button>
+      <button id="resolve" class="primary">4. 处理</button>
+      <button id="resetLab">重置场景</button>
+    </div>
+    <pre id="labLog" aria-live="polite"></pre>
+  </section>
+
+  <section class="panel">
+    <details>
+      <summary>随时可查：函数与参数小字典</summary>
+      <div id="glossary"></div>
+    </details>
+  </section>
+
+  <section class="panel">
+    <h2>下一阶段预告：从代价开始</h2>
+    <p>
+      第23课先认识“支付800 LP作为代价”和“效果使LP减少800”的区别；
+      然后分别学习 CheckLPCost、PayLPCost、SetCost，最后才组合完整代价函数。
+    </p>
+    <p class="muted">
+      完成本版新增的两课后，就可以继续。暂时不需要背诵筛选卡片和取对象的长参数列表。
+    </p>
+  </section>
+
+  <p class="small muted">
+    现代 EDOPro 常见写法。最终示例需要对应普通魔法卡数据库记录，
+    脚本应位于客户端配置的 script 搜索路径，并在实际引擎中验证。
+  </p>
+</main>
+</div>
+
+<script>
+"use strict";
+
+const $=id=>document.getElementById(id);
+function esc(value){
+  return String(value).replace(/[&<>"']/g,c=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  })[c]);
+}
+function box(title,fields){
+  return `<div class="object"><b>${esc(title)}</b><div class="fields">${
+    fields.map(([k,v])=>`<span>${esc(k)}</span><span>${esc(v)}</span>`).join("")
+  }</div></div>`;
+}
+function step(code,caption,fields){
+  return {code,caption,fields};
+}
+
+const fullScript=`local s,id=GetID()
+
+function s.initial_effect(c)
+    local e1=Effect.CreateEffect(c)
+    e1:SetCategory(CATEGORY_DRAW)
+    e1:SetType(EFFECT_TYPE_ACTIVATE)
+    e1:SetCode(EVENT_FREE_CHAIN)
+    e1:SetTarget(s.target)
+    e1:SetOperation(s.operation)
+    c:RegisterEffect(e1)
+end
+
+function s.target(e,tp,eg,ep,ev,re,r,rp,chk)
+    if chk==0 then
+        return Duel.IsPlayerCanDraw(tp,1)
+    end
+    Duel.SetOperationInfo(0,CATEGORY_DRAW,nil,0,tp,1)
+end
+
+function s.operation(e,tp,eg,ep,ev,re,r,rp)
+    Duel.Draw(tp,1,REASON_EFFECT)
+end`;
+
+const lessons=[
+{
+  title:"注册与执行",
+  goal:"理解“登记抽卡效果”不等于“现在抽卡”。",
+  text:`<p>上一阶段注册了一个自身加攻效果，由引擎在适用状态下参与攻击力计算。</p>
+    <p>但抽卡魔法应该在<strong>发动并处理效果时</strong>抽卡，而不是初始化卡片时抽卡。</p>
+    <p><code>initial_effect</code> 仍然负责安装效果，处理函数负责之后真正执行动作。</p>`,
+  example:`function s.initial_effect(c)
+    -- 注册效果，不在这里直接抽卡
+end
+
+function s.operation(e,tp)
+    -- 处理时执行抽卡
+end`,
+  takeaway:"初始化是安装能力，处理是执行动作。",
+  steps:[
+    step("-- 准备初始化","效果尚未登记。",[["手牌","5张"],["效果","未注册"]]),
+    step("-- initial_effect 登记效果","注册过程没有执行抽卡。",[["手牌","仍是5张"],["效果","已注册"]]),
+    step("-- 之后发动并正常处理","到处理阶段才发生抽卡。",[["手牌","6张"],["执行阶段","operation"]])
+  ],
+  question:"为什么不把抽卡语句直接写在 initial_effect 中？",
+  options:["否则可能在初始化时就执行抽卡","因为 Lua 不允许嵌套函数调用","因为所有魔法都不需要初始化"],
+  correct:0,
+  explanation:"函数体在入口被调用时执行，初始化并不是你想要的抽卡处理时机。",
+  prompt:"填写本课约定的效果处理函数名。",
+  template:"function s.____(e,tp)\nend",
+  answer:"operation",
+  hint:"本课使用 operation 命名处理函数，之后还要把它绑定给效果。"
+},
+{
+  title:"SetOperation 与回调",
+  goal:"把处理函数交给引擎，等待合适时机调用。",
+  text:`<p><code>e1:SetOperation(s.operation)</code> 指定 e1 的处理函数。</p>
+    <p><strong>回调</strong>就是把函数交给其他系统，让它稍后调用。</p>
+    <p>函数叫 operation 是常见习惯，并不是取了这个名字就自动绑定；
+    建立关系的是 <code>SetOperation</code>。</p>`,
+  example:"e1:SetOperation(s.operation)",
+  takeaway:"SetOperation 绑定函数，不会立刻执行函数体。",
+  steps:[
+    step("-- e1 已创建","还没登记处理回调。",[["处理函数","未设置"]]),
+    step("e1:SetOperation(s.operation)","保存对函数的引用。",[["处理函数","s.operation"],["执行次数","0"]]),
+    step("-- 引擎稍后调用处理回调","进入处理阶段，才执行函数体。",[["执行次数","1"]])
+  ],
+  question:"SetOperation 调用完成时，operation 一定已经执行了吗？",
+  options:["一定执行了一次","没有，它只是绑定回调","只有玩家0才执行"],
+  correct:1,
+  explanation:"此时建立回调关系，后续处理时才由引擎调用。",
+  prompt:"补全要交给效果的函数值。",
+  template:"e1:SetOperation(____)",
+  answer:"s.operation",
+  hint:"传函数本身，不要在 operation 后面加调用括号。"
+},
+{
+  title:"函数值与立即调用",
+  goal:"分清 s.operation 和 s.operation()。",
+  text:`<p><code>s.operation</code> 是函数值。</p>
+    <p><code>s.operation()</code> 会立即调用函数，然后得到返回结果。</p>
+    <p>写 <code>SetOperation(s.operation())</code> 就会先执行函数，
+    再把它的返回结果交给 SetOperation。</p>
+    <p>处理函数可能没有返回值，也可能因为此时缺少参数而直接报错。</p>`,
+  example:`-- 传函数
+e1:SetOperation(s.operation)
+
+-- 错误示例：先调用，再传返回结果
+e1:SetOperation(s.operation())`,
+  takeaway:"绑定回调传函数值，不是传一次函数调用的结果。",
+  steps:[
+    step("s.operation","取得函数值，不执行它。",[["结果","函数值"],["是否执行","否"]]),
+    step("s.operation()","立即调用；本步骤仅示意调用语义。",[["是否执行","是"],["没有 return 时","不返回结果"]]),
+    step("e1:SetOperation(s.operation)","正确保存函数引用。",[["回调","已绑定"],["此刻执行","否"]])
+  ],
+  question:"SetOperation(s.operation()) 会把什么作为参数传入？",
+  options:["函数调用的返回结果","函数名字的文字","一定是原函数本身"],
+  correct:0,
+  explanation:"Lua 会先求值括号内的表达式，因此先执行 s.operation()。",
+  prompt:"输入正确的完整绑定语句。",
+  template:"修正：e1:SetOperation(s.operation())",
+  answer:"e1:SetOperation(s.operation)",
+  hint:"保留 SetOperation 的括号，去掉 operation 后面的调用括号。"
+},
+{
+  title:"回调参数 e 与 tp",
+  goal:"先认识效果对象和发动玩家，不背整串参数。",
+  text:`<p><code>e</code> 是引擎这次传入的效果对象。</p>
+    <p><code>tp</code> 在本课发动效果里表示发动玩家。</p>
+    <p>玩家编号是0和1，因此另一个玩家可以表示为 <code>1-tp</code>。</p>
+    <p>不要固定写0代表“我”。同一份卡片脚本应该对双方都适用。</p>`,
+  example:`function s.operation(e,tp)
+    -- e：当前效果对象
+    -- tp：发动玩家
+    -- 1-tp：另一位玩家
+end`,
+  takeaway:"本课中，要让发动者获得效果，就使用 tp。",
+  steps:[
+    step("-- 玩家0发动","本次 tp 是0。",[["tp","0"],["1-tp","1"]]),
+    step("-- 玩家1发动","同一脚本接收到不同参数。",[["tp","1"],["1-tp","0"]]),
+    step("-- 始终使用 tp 表示发动者","不需要为双方分别写两份脚本。",[["受益玩家","本次发动玩家"]])
+  ],
+  question:"玩家1发动时，1-tp 等于多少？",
+  options:["0","1","卡片编号"],
+  correct:0,
+  explanation:"1-1=0，另一位玩家就是玩家0。",
+  prompt:"填出表示发动玩家的参数。",
+  template:"Duel.Draw(____,1,REASON_EFFECT)",
+  answer:"tp",
+  hint:"当前效果用 e 表示；本课发动玩家用 tp 表示。"
+},
+{
+  title:"Duel.Draw：真正抽卡",
+  goal:"读懂改变决斗状态的第一个 Duel 函数。",
+  text:`<p><code>Duel</code> 提供决斗层面的功能，不是某张 Card 或某个 Effect 实例。</p>
+    <p><code>Duel.Draw(tp,1,REASON_EFFECT)</code> 的参数依次是玩家、张数、原因。</p>
+    <p><code>REASON_EFFECT</code> 是“由效果引起”的原因常量。</p>
+    <p>这里使用点号。不要把所有 API 都改成冒号调用。</p>`,
+  example:`function s.operation(e,tp)
+    Duel.Draw(tp,1,REASON_EFFECT)
+end`,
+  takeaway:"Duel.Draw 实际尝试执行抽卡，应放在效果处理阶段。",
+  steps:[
+    step("-- 玩家0即将处理效果","先看处理前的数值。",[["tp","0"],["手牌","5张"],["卡组","20张"]]),
+    step("Duel.Draw(tp,1,REASON_EFFECT)","正常抽取1张。",[["玩家0手牌","6张"],["玩家0卡组","19张"]]),
+    step("-- 处理结束","这条语句没有让对方抽卡。",[["玩家1手牌","仍是5张"]])
+  ],
+  question:"Duel.Draw(tp,1,REASON_EFFECT) 中的1是什么？",
+  options:["玩家编号","抽卡张数","效果次数限制"],
+  correct:1,
+  explanation:"第一个参数 tp 才是玩家，第二个参数是张数。",
+  prompt:"填写让发动玩家因效果抽1张卡的完整语句。",
+  template:"-- 放在 operation 中\n____",
+  answer:"Duel.Draw(tp,1,REASON_EFFECT)",
+  hint:"顺序是玩家、张数、原因。"
+},
+{
+  title:"SetCategory：效果分类",
+  goal:"单独认识分类 API，区分“贴标签”和“执行效果”。",
+  text:`<p><code>e1:SetCategory(CATEGORY_DRAW)</code> 设置 e1 的<strong>效果类别</strong>。</p>
+    <p>可以先把它理解成给效果贴上“抽卡类”的标签，供引擎及相关逻辑识别。</p>
+    <p>它不会绑定抽卡函数，也不会因为写了 CATEGORY_DRAW 就自动抽卡。</p>
+    <p>本例用到的三种配置不同：</p>
+    <p><code>SetType</code>：什么类型的效果；
+    <code>SetCategory</code>：涉及什么类别的处理；
+    <code>SetOperation</code>：处理时调用哪个函数。</p>
+    <p>类别配置应与真实效果一致，不能靠随便添加分类来“获得”对应功能。</p>`,
+  example:`e1:SetCategory(CATEGORY_DRAW)
+
+-- 分类：抽卡类
+-- 不等于：
+-- Duel.Draw(tp,1,REASON_EFFECT)`,
+  takeaway:"SetCategory 说明效果属于哪一类，不执行那一类操作。",
+  steps:[
+    step("-- e1 已创建","还没有设置分类。",[["类别","未设置"],["手牌","5张"]]),
+    step("e1:SetCategory(CATEGORY_DRAW)","配置抽卡类别，手牌没有变化。",[["类别","CATEGORY_DRAW"],["手牌","仍是5张"]]),
+    step("-- 如果只设置类别，没有抽卡处理代码",
+      "单独一个分类不会自动生成抽卡动作。",
+      [["类别","抽卡"],["是否因此抽卡","不会"]]),
+    step("-- 之后 operation 执行 Duel.Draw",
+      "分类与具体处理各司其职。真正抽卡发生在 Draw 调用。",
+      [["处理代码","Duel.Draw(...)"],["正常处理后的手牌","6张"]])
+  ],
+  question:"只调用 SetCategory(CATEGORY_DRAW)，没有任何抽卡处理代码，会自动抽卡吗？",
+  options:["会，类别就是执行命令","不会，类别只描述效果","会，但只抽0张"],
+  correct:1,
+  explanation:"类别不是处理实现。实际抽卡需要在合适阶段调用 Duel.Draw。",
+  prompt:"为效果 e1 设置抽卡类别，填写完整语句。",
+  template:"-- 设置分类，不执行抽卡\n____",
+  answer:"e1:SetCategory(CATEGORY_DRAW)",
+  hint:"对象是 e1，方法是 SetCategory，参数是 CATEGORY_DRAW。"
+},
+{
+  title:"ACTIVATE 与 FREE_CHAIN",
+  goal:"为普通魔法登记发动效果，不误解“自由连锁”。",
+  text:`<p>本例数据库将卡片定义为<strong>普通魔法</strong>。</p>
+    <p>脚本使用 <code>EFFECT_TYPE_ACTIVATE</code> 注册卡片发动效果。</p>
+    <p><code>EVENT_FREE_CHAIN</code> 表示不等待某个指定事件代码来触发。</p>
+    <p><strong>它不会让普通魔法在任何时点发动，也不会把普通魔法变成速攻魔法。</strong></p>
+    <p>卡片类型、发动时机、优先权和其他限制仍然存在。</p>`,
+  example:`e1:SetCategory(CATEGORY_DRAW)
+e1:SetType(EFFECT_TYPE_ACTIVATE)
+e1:SetCode(EVENT_FREE_CHAIN)`,
+  takeaway:"Category 是类别，Type 是类型，Code 在这里指定事件代码。",
+  steps:[
+    step("e1:SetType(EFFECT_TYPE_ACTIVATE)","设置卡片发动效果类型。",[["类型","ACTIVATE"]]),
+    step("e1:SetCode(EVENT_FREE_CHAIN)","不以指定事件如召唤成功作为触发代码。",[["代码","EVENT_FREE_CHAIN"]]),
+    step("-- 仍遵守普通魔法的规则","FREE_CHAIN 不会取消规则限制。",[["数据库类型","普通魔法"],["任意时点发动","不可以"]])
+  ],
+  question:"普通魔法设置 EVENT_FREE_CHAIN 后可以在对手回合任意发动吗？",
+  options:["可以，这是这个常量的意义","不可以，仍受卡片类型和规则限制","只要同时设置 CATEGORY_DRAW 就可以"],
+  correct:1,
+  explanation:"分类和事件代码都不会把普通魔法变成速攻魔法。",
+  prompt:"填写卡片发动效果的类型常量。",
+  template:"e1:SetType(____)",
+  answer:"EFFECT_TYPE_ACTIVATE",
+  hint:"这是发动效果，不是上一阶段的 SINGLE 数值效果。"
+},
+{
+  title:"target 与 chk：先检查",
+  goal:"知道没有取对象的抽卡效果，为什么仍可以有 target。",
+  text:`<p><code>SetTarget(s.target)</code> 绑定 target 回调。</p>
+    <p>这里的 target 不仅用于选对象，还可负责发动合法性检查和处理信息登记。</p>
+    <p><code>chk==0</code> 是询问能否发动：返回结果，不执行效果。</p>
+    <p>抽卡检查使用 <code>Duel.IsPlayerCanDraw(tp,1)</code>。</p>
+    <p>正式 target 阶段也不实际抽卡。本例不取对象，不设置 CARD_TARGET 属性。</p>
+    <p>目前不用背 eg 到 rp，但要保留骨架中的位置，否则 chk 会错接参数。</p>`,
+  example:`function s.target(e,tp,eg,ep,ev,re,r,rp,chk)
+    if chk==0 then
+        return Duel.IsPlayerCanDraw(tp,1)
+    end
+    -- 正式阶段登记处理信息，下一课学习
+end`,
+  takeaway:"检查函数问“能不能”，处理函数才执行“做什么”。",
+  steps:[
+    step("-- 引擎调用 target，传入 chk=0","这是参数场景说明，不是实际调用语句。",[["阶段","检查"],["手牌","5张"]]),
+    step("return Duel.IsPlayerCanDraw(tp,1)","没有禁止抽卡等限制时，本场景返回 true。",[["结果","true"],["手牌","仍是5张"]]),
+    step("-- 玩家被禁止抽卡，再检查","返回 false，不发动，也不抽卡。",[["结果","false"],["手牌","仍是5张"]])
+  ],
+  question:"为什么检查阶段不能使用 Duel.Draw？",
+  options:["检查可能重复调用，且不应实际执行效果","Draw 只能写在数据库里","Lua 不允许 return"],
+  correct:0,
+  explanation:"检查应该尽量不改变决斗状态。多次询问不能导致多次抽卡。",
+  prompt:"填写检查发动者能否抽1张卡的表达式。",
+  template:"if chk==0 then\n    return ____\nend",
+  answer:"Duel.IsPlayerCanDraw(tp,1)",
+  hint:"IsPlayerCanDraw 是检查；Draw 是执行。"
+},
+{
+  title:"SetOperationInfo：处理信息",
+  goal:"把“效果类别”和“本次预计处理信息”分开理解。",
+  text:`<p><code>SetCategory</code> 配置效果对象的类别。</p>
+    <p><code>Duel.SetOperationInfo</code> 则登记<strong>本次连锁的预计处理信息</strong>，
+    例如哪位玩家预计抽几张卡。</p>
+    <p>本课只学这一条抽卡写法，不要求把参数泛化到所有类别：</p>
+    <p><code>0</code>：当前连锁；
+    <code>CATEGORY_DRAW</code>：抽卡类别；
+    <code>nil</code>：不提供卡片 Group；
+    后面的 <code>0</code>：本例不使用的卡片数量信息；
+    <code>tp</code>：玩家；
+    最后的 <code>1</code>：抽卡数量。</p>
+    <p>它通常写在正式 target 阶段。登记预计抽卡并不保证处理成功，更不会立即增加手牌。</p>`,
+  example:`function s.target(e,tp,eg,ep,ev,re,r,rp,chk)
+    if chk==0 then
+        return Duel.IsPlayerCanDraw(tp,1)
+    end
+    Duel.SetOperationInfo(0,CATEGORY_DRAW,nil,0,tp,1)
+end`,
+  takeaway:"Category 是效果类别；OperationInfo 是本次处理信息；Draw 才实际抽卡。",
+  steps:[
+    step("e1:SetCategory(CATEGORY_DRAW)","初始化时配置效果类别。",[["对象","e1"],["类别","抽卡"]]),
+    step("Duel.SetOperationInfo(0,CATEGORY_DRAW,nil,0,tp,1)",
+      "正式 target 阶段，登记本次预计处理。",
+      [["玩家","tp"],["预计抽卡","1张"],["手牌","仍是5张"]]),
+    step("-- 如果这个效果之后被无效",
+      "预计处理信息不等于已经执行，也不保证最终执行成功。",
+      [["预计处理","抽1张"],["实际抽卡","0张"]]),
+    step("Duel.Draw(tp,1,REASON_EFFECT)",
+      "另一个正常处理场景中，实际抽卡由这条语句完成。",
+      [["实际执行者","Duel.Draw"],["正常处理后手牌","6张"]])
+  ],
+  question:"为什么已经设置 CATEGORY_DRAW，还要登记 OperationInfo？",
+  options:["为了让玩家抽两次卡","因为一个是类别，另一个描述本次预计处理","因为两者完全相同，必须重复调用"],
+  correct:1,
+  explanation:"效果类别与本次连锁的预计处理信息属于不同层次，二者都不执行抽卡。",
+  prompt:"填写登记“当前连锁中，发动玩家预计抽1张”的完整语句。",
+  template:"-- 正式 target 阶段\n____",
+  answer:"Duel.SetOperationInfo(0,CATEGORY_DRAW,nil,0,tp,1)",
+  hint:"按本课抽卡模板填写，不要把最后的1理解为玩家编号。"
+},
+{
+  title:"组装完整抽卡魔法",
+  goal:"用已经学过的 API 串起注册、检查、信息登记和处理。",
+  text:`<p>本课没有新 API，只组合前面的内容。</p>
+    <p>初始化：创建效果，配置类别、类型、事件，绑定回调，注册。</p>
+    <p>target 检查分支：回答能否抽卡。</p>
+    <p>target 正式分支：登记预计抽卡信息。</p>
+    <p>operation：实际尝试抽卡。</p>
+    <p>本例是普通魔法“自己抽1张卡”，不涉及代价、取对象或一回合一次。</p>`,
+  example:`初始化：SetCategory / SetType / SetCode
+        SetTarget / SetOperation / RegisterEffect
+
+检查：IsPlayerCanDraw
+登记：SetOperationInfo
+处理：Draw`,
+  takeaway:"每一个阶段只做自己的工作，不把登记和检查写成实际执行。",
+  steps:[
+    step("s.initial_effect(c)","注册并绑定，不抽卡。",[["手牌","5张"],["状态","已注册"]]),
+    step("-- target 检查分支","能抽卡，允许申请发动。",[["检查结果","true"],["手牌","5张"]]),
+    step("Duel.SetOperationInfo(0,CATEGORY_DRAW,nil,0,tp,1)",
+      "正式登记处理信息，进入连锁。",[["预计","抽1张"],["手牌","5张"]]),
+    step("Duel.Draw(tp,1,REASON_EFFECT)","无其他影响时，处理并抽卡。",[["手牌","6张"],["状态","处理结束"]])
+  ],
+  question:"下面哪个顺序符合本课效果流程？",
+  options:[
+    "初始化抽卡 → 检查再抽卡 → 分类",
+    "初始化注册 → 检查 → 登记本次处理信息 → 处理抽卡",
+    "设置类别 → 引擎自动生成所有处理代码"
+  ],
+  correct:1,
+  explanation:"注册、检查、登记信息和实际处理是不同工作。",
+  prompt:"补全七处 ____。保留本课骨架和命名。",
+  template:"受限骨架检查，不是任意 Lua 编译器。\n允许空白、单行注释和行末分号。",
+  full:true,
+  starter:`local s,id=GetID()
+
+function s.initial_effect(c)
+    local e1=Effect.CreateEffect(c)
+    e1:SetCategory(____)
+    e1:SetType(____)
+    e1:SetCode(EVENT_FREE_CHAIN)
+    e1:SetTarget(s.target)
+    e1:SetOperation(____)
+    c:RegisterEffect(e1)
+end
+
+function s.target(e,tp,eg,ep,ev,re,r,rp,chk)
+    if chk==0 then
+        return ____
+    end
+    ____
+end
+
+function s.operation(e,tp,eg,ep,ev,re,r,rp)
+    Duel.Draw(____,1,____)
+end`,
+  answer:fullScript,
+  hint:"依次补：抽卡类别、发动类型、处理函数值、抽卡检查、处理信息、发动玩家、效果原因。"
+}
+];
+
+/* ---------- 记录与显示 ---------- */
+const KEY="ygo-stage2-unified-v2";
+let state={current:0,records:{}};
+try{
+  const saved=JSON.parse(localStorage.getItem(KEY)||"null");
+  if(saved && typeof saved==="object"){
+    if(Number.isInteger(saved.current)&&saved.current>=0&&saved.current<lessons.length){
+      state.current=saved.current;
+    }
+    if(saved.records&&typeof saved.records==="object"&&!Array.isArray(saved.records)){
+      state.records=saved.records;
+    }
+  }
+}catch{
+  $("storageNotice").textContent="无法读取学习记录，本次仍可正常学习。";
+}
+function record(i=state.current){
+  if(!state.records[i]||typeof state.records[i]!=="object"){
+    state.records[i]={step:0,observed:false,quiz:false,exercise:false,draft:null};
+  }
+  const r=state.records[i];
+  if(!Number.isInteger(r.step)||r.step<0||r.step>=lessons[i].steps.length)r.step=0;
+  return r;
+}
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(state));}
+  catch{$("storageNotice").textContent="当前浏览器无法保存学习记录。";}
+}
+function complete(i){
+  const r=record(i);
+  return r.observed&&r.quiz&&r.exercise;
+}
+function refresh(){
+  $("nav").replaceChildren();
+  lessons.forEach((l,i)=>{
+    const b=document.createElement("button");
+    b.className=i===state.current?"active":"";
+    if(i===state.current)b.setAttribute("aria-current","step");
+    b.innerHTML=`<span class="num">${13+i}</span>
+      <span>${esc(l.title)}${l.added?' <span class="new">新增</span>':""}</span>
+      <span class="tick">${complete(i)?"✓":""}</span>`;
+    b.onclick=()=>openLesson(i);
+    $("nav").appendChild(b);
+  });
+  const count=lessons.filter((_,i)=>complete(i)).length;
+  $("progressText").textContent=`${count} / ${lessons.length}`;
+  $("progressBar").style.width=`${count/lessons.length*100}%`;
+  const r=record();
+  $("checklist").innerHTML=[
+    [r.observed,"看完全部观察步骤"],
+    [r.quiz,"答对理解题"],
+    [r.exercise,"完成本课小练习"]
+  ].map(([ok,text])=>`<div class="${ok?"goodText":"muted"}">${ok?"✓":"○"} ${text}</div>`).join("");
+  $("lessonStatus").textContent=complete(state.current)?"✓ 本课已完成":"按自己的节奏慢慢来";
+}
+function renderStep(){
+  const l=lessons[state.current],r=record(),s=l.steps[r.step];
+  $("visual").innerHTML=`<div class="visualTitle">教学场景 · 第 ${r.step+1} 步</div>`+
+    box("当前状态",s.fields);
+  $("stepCode").textContent=s.code;
+  $("stepCaption").textContent=s.caption;
+  $("stepCount").textContent=`观察进度：${r.step+1} / ${l.steps.length}`;
+  $("previousStep").disabled=r.step===0;
+  $("nextStep").disabled=r.step===l.steps.length-1;
+  $("nextStep").textContent=r.step===l.steps.length-1?"观察完毕 ✓":"观察下一步 →";
+  if(r.step===l.steps.length-1)r.observed=true;
+  save();refresh();
+}
+function renderQuiz(){
+  const l=lessons[state.current],r=record();
+  $("question").textContent=l.question;
+  $("options").replaceChildren();
+  l.options.forEach((text,i)=>{
+    const b=document.createElement("button");
+    b.className="option"+(r.quiz&&i===l.correct?" good":"");
+    b.textContent=String.fromCharCode(65+i)+". "+text;
+    b.onclick=()=>{
+      document.querySelectorAll("#options .option").forEach(x=>x.classList.remove("good","bad"));
+      const ok=i===l.correct;
+      b.classList.add(ok?"good":"bad");
+      $("quizFeedback").className="feedback "+(ok?"goodText":"badText");
+      $("quizFeedback").textContent=ok?"正确！"+l.explanation:"还不对，回看知识点后可以继续选择，不扣分。";
+      if(ok){r.quiz=true;save();refresh();}
+    };
+    $("options").appendChild(b);
+  });
+  $("quizFeedback").className="feedback"+(r.quiz?" goodText":"");
+  $("quizFeedback").textContent=r.quiz?"✓ 已答对。"+l.explanation:"";
+}
+function openLesson(i){
+  if(i<0||i>=lessons.length)return;
+  state.current=i;
+  const l=lessons[i],r=record();
+  $("lessonTag").textContent=`第二阶段 · 第 ${13+i} 课${l.added?" · 本版新增":""}`;
+  $("lessonTitle").textContent=l.title;
+  $("lessonGoal").textContent=l.goal;
+  $("lessonText").innerHTML=l.text;
+  $("example").textContent=l.example;
+  $("takeaway").textContent="记住这一句："+l.takeaway;
+  $("exercisePrompt").textContent=l.prompt;
+  $("exerciseTemplate").textContent=l.template;
+  $("exerciseHint").textContent=l.hint;
+  $("exerciseSolution").textContent=l.answer;
+  $("answerInput").hidden=!!l.full;
+  $("codeInput").hidden=!l.full;
+  $("inputLabel").htmlFor=l.full?"codeInput":"answerInput";
+  $("inputLabel").textContent=l.full?"补全下面的脚本":"在下方填写空缺部分";
+  const input=l.full?$("codeInput"):$("answerInput");
+  input.value=typeof r.draft==="string"?r.draft:(l.starter||"");
+  $("exerciseFeedback").className="feedback"+(r.exercise?" goodText":"");
+  $("exerciseFeedback").textContent=r.exercise?"✓ 已通过本课练习，可以再次复习。":"";
+  $("hintDetails").open=false;
+  $("solutionDetails").open=false;
+  $("previousLesson").disabled=i===0;
+  $("nextLesson").disabled=i===lessons.length-1;
+  $("nextLesson").textContent=i===lessons.length-1?"本阶段最后一课":"下一课 →";
+  renderQuiz();renderStep();save();
+}
+$("previousStep").onclick=()=>{
+  if(record().step>0){record().step--;renderStep();}
+};
+$("nextStep").onclick=()=>{
+  if(record().step<lessons[state.current].steps.length-1){record().step++;renderStep();}
+};
+$("previousLesson").onclick=()=>{
+  openLesson(state.current-1);window.scrollTo({top:0,behavior:"smooth"});
+};
+$("nextLesson").onclick=()=>{
+  openLesson(state.current+1);window.scrollTo({top:0,behavior:"smooth"});
+};
+
+/* ---------- 填空与受限骨架检查 ---------- */
+function norm(s){return s.trim().replace(/\s+/g,"").replace(/;+$/,"");}
+function codeLines(s){
+  return s.split(/\r?\n/).map(line=>line.replace(/--.*$/,"").trim())
+    .filter(Boolean).map(norm);
+}
+function checkExercise(){
+  const l=lessons[state.current],r=record();
+  const value=(l.full?$("codeInput"):$("answerInput")).value;
+  r.draft=value;
+  let ok=false,message="";
+  if(l.full){
+    const actual=codeLines(value),expected=codeLines(l.answer);
+    const mismatch=expected.findIndex((line,i)=>line!==actual[i]);
+    ok=mismatch===-1&&actual.length===expected.length;
+    message=mismatch!==-1?
+      `有效代码第 ${mismatch+1} 行仍需调整。检查占位符、大小写及参数。`:
+      "存在额外代码。本题只检查给定骨架。";
+  }else{
+    ok=norm(value)===norm(l.answer);
+  }
+  $("exerciseFeedback").className="feedback "+(ok?"goodText":"badText");
+  $("exerciseFeedback").textContent=ok?
+    (l.full?"✓ 骨架正确！这是结构检查，不是实际引擎执行结果。":"✓ 正确！再想想它属于配置、检查、登记还是处理。"):
+    (message||"暂时不匹配。请检查大小写、点号和冒号，只填写题目要求的部分。");
+  if(ok)r.exercise=true;
+  save();refresh();
+}
+$("checkAnswer").onclick=checkExercise;
+$("resetAnswer").onclick=()=>{
+  const l=lessons[state.current],input=l.full?$("codeInput"):$("answerInput");
+  input.value=l.starter||"";
+  record().draft=input.value;save();
+  $("exerciseFeedback").className="feedback muted";
+  $("exerciseFeedback").textContent="输入已重置，已有通过记录保留。";
+};
+["answerInput","codeInput"].forEach(id=>{
+  $(id).addEventListener("input",e=>{record().draft=e.target.value;save();});
+});
+$("answerInput").addEventListener("keydown",e=>{
+  if(e.key==="Enter")checkExercise();
+});
+$("codeInput").addEventListener("keydown",e=>{
+  if(e.key==="Tab"){
+    e.preventDefault();
+    e.target.setRangeText("    ",e.target.selectionStart,e.target.selectionEnd,"end");
+    e.target.dispatchEvent(new Event("input"));
+  }
+  if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){
+    e.preventDefault();checkExercise();
+  }
+});
+$("clearProgress").onclick=()=>{
+  if(!confirm("清空本修订版所有记录和草稿？旧版记录不会受到影响。"))return;
+  state={current:0,records:{}};save();openLesson(0);
+};
+
+/* ---------- 固定规则教学实验台 ---------- */
+let lab;
+function tp(){return Number($("player").value);}
+function appendLog(text){
+  lab.log.push(text);
+  if(lab.log.length>100)lab.log.shift();
+}
+function canDraw(){return !$("cannotDraw").checked;}
+function resetLab(){
+  lab={
+    phase:"new",hand:[5,5],deck:[20,20],
+    category:false,info:false,
+    log:["新场景：双方手牌5张、卡组20张。"]
+  };
+  $("cannotDraw").checked=false;
+  $("negated").checked=false;
+  renderLab();
+}
+function renderLab(){
+  $("phase").innerHTML=[
+    ["new","未初始化"],["ready","效果已注册"],["chain","等待处理"],["done","处理结束"]
+  ].map(([key,text])=>`<span class="${lab.phase===key?"active":""}">${text}</span>`).join("");
+
+  $("players").innerHTML=[0,1].map(i=>box(
+    `玩家${i}${i===tp()?" · 发动者":""}`,
+    [["手牌",lab.hand[i]+"张"],["卡组",lab.deck[i]+"张"]]
+  )).join("");
+
+  $("engineState").innerHTML=box("分类与本次处理信息",[
+    ["效果类别",lab.category?"CATEGORY_DRAW":"未设置"],
+    ["本次预计处理",lab.info?`玩家${tp()}抽1张`:"尚未登记"]
+  ]);
+  $("initialize").disabled=lab.phase!=="new";
+  $("inspect").disabled=lab.phase!=="ready";
+  $("activate").disabled=lab.phase!=="ready";
+  $("resolve").disabled=lab.phase!=="chain";
+  $("labLog").textContent=lab.log.join("\n");
+  $("labLog").scrollTop=$("labLog").scrollHeight;
+}
+$("initialize").onclick=()=>{
+  if(lab.phase!=="new")return;
+  lab.category=true;lab.phase="ready";
+  appendLog("① initial_effect：创建并配置效果。");
+  appendLog("  SetCategory(CATEGORY_DRAW)：设置抽卡类别，没有抽卡。");
+  appendLog("  设置 ACTIVATE / FREE_CHAIN，绑定 target 和 operation。");
+  appendLog("  RegisterEffect：注册完成。手牌不变。");
+  renderLab();
+};
+$("inspect").onclick=()=>{
+  if(lab.phase!=="ready")return;
+  appendLog(`② 检查阶段：IsPlayerCanDraw(${tp()},1) → ${canDraw()?"true":"false"}`);
+  appendLog("  仅返回能否发动，不抽卡，也不登记本次正式处理信息。");
+  renderLab();
+};
+$("activate").onclick=()=>{
+  if(lab.phase!=="ready")return;
+  appendLog("③ 申请发动：重新检查当前状态。");
+  if(!canDraw()){
+    appendLog("  检查失败，未进入连锁。");
+  }else{
+    lab.info=true;lab.phase="chain";
+    appendLog(`  正式 target：SetOperationInfo 登记玩家${tp()}预计抽1张。`);
+    appendLog("  进入连锁，等待处理；手牌仍未改变。");
+  }
+  renderLab();
+};
+$("resolve").onclick=()=>{
+  if(lab.phase!=="chain")return;
+  appendLog("④ 连锁处理。");
+  if($("negated").checked){
+    appendLog("  本教学场景：效果被无效，不执行抽卡。");
+  }else{
+    appendLog(`  operation：Duel.Draw(${tp()},1,REASON_EFFECT)。`);
+    if(!canDraw()){
+      appendLog("  当前被禁止抽卡，这次抽卡不能执行。");
+    }else{
+      lab.hand[tp()]++;lab.deck[tp()]--;
+      appendLog(`  玩家${tp()}实际抽1张。`);
+    }
+  }
+  appendLog("  流程结束。预计处理信息不保证实际处理成功。");
+  lab.phase="done";renderLab();
+};
+$("cannotDraw").onchange=()=>{
+  appendLog("场景变化：发动者"+($("cannotDraw").checked?"被禁止抽卡。":"不再被禁止抽卡。"));
+  renderLab();
+};
+$("negated").onchange=()=>{
+  appendLog("场景设置：处理时效果"+($("negated").checked?"被无效。":"不被无效。"));
+  renderLab();
+};
+$("player").onchange=resetLab;
+$("resetLab").onclick=resetLab;
+
+/* ---------- 字典 ---------- */
+const terms=[
+  ["SetOperation","绑定效果处理函数，不立即调用。"],
+  ["s.operation / s.operation()","前者是函数值，后者是立即调用并取得返回结果。"],
+  ["e","当前回调收到的效果对象。"],
+  ["tp","在本课发动效果中表示发动玩家。其他回调需结合上下文理解。"],
+  ["Duel.Draw","实际尝试执行抽卡。"],
+  ["REASON_EFFECT","表示由效果引起的原因常量。"],
+  ["SetCategory","设置效果类别，不执行对应操作。"],
+  ["CATEGORY_DRAW","抽卡类别常量。"],
+  ["SetType","设置效果类型，不等同于效果类别。"],
+  ["EFFECT_TYPE_ACTIVATE","卡片发动效果类型。"],
+  ["EVENT_FREE_CHAIN","不以指定事件代码触发，不代表任意时点都可发动。"],
+  ["SetTarget","绑定 target 回调；该回调不只用于取对象。"],
+  ["chk==0","本课 target 的检查阶段，只回答能否发动。"],
+  ["Duel.IsPlayerCanDraw","判断指定玩家能否抽指定张数，不执行抽卡。"],
+  ["Duel.SetOperationInfo","登记本次连锁预计处理信息，不执行效果。参数含义需结合类别理解。"],
+  ["eg、ep、ev、re、r、rp","本阶段不用的上下文参数。保留位置，以便后面的 chk 正确接收参数。"]
+];
+$("glossary").innerHTML=terms.map(([name,text])=>
+  `<div style="margin-top:14px"><strong style="color:var(--blue)">${esc(name)}</strong>
+  <div class="muted">${esc(text)}</div></div>`
+).join("");
+
+openLesson(state.current);
+resetLab();
+</script>
+<script src="progress-sync.js"></script>
+</body>
+</html>

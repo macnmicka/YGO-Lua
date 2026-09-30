@@ -1,0 +1,1536 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>YGO Lua · 第五阶段：取对象与处理</title>
+<style>
+:root{
+ --bg:#0a1020;--panel:#131e33;--panel2:#18263f;
+ --line:#2a3c5d;--text:#e6eeff;--muted:#a8b9d5;
+ --blue:#86a5ff;--green:#69e2b2;--yellow:#ffd782;--red:#ff9aa8;
+}
+*{box-sizing:border-box}
+body{
+ margin:0;background:radial-gradient(ellipse at top right,#172750,transparent 50%),var(--bg);
+ color:var(--text);font:15px/1.8 system-ui,"Microsoft YaHei",sans-serif;
+}
+button,input,textarea,select{font:inherit}
+button{
+ cursor:pointer;padding:9px 14px;border:1px solid var(--line);
+ border-radius:9px;background:var(--panel2);color:var(--text);
+}
+button:hover{border-color:var(--blue)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{
+ outline:2px solid var(--blue);outline-offset:3px;
+}
+.primary{background:#486aca;border-color:#6485e6;color:white}
+.shell{display:grid;grid-template-columns:255px minmax(0,1fr);min-height:100vh}
+aside{
+ position:sticky;top:0;height:100vh;overflow:auto;
+ padding:22px 16px;border-right:1px solid var(--line);background:#0c1425;
+}
+.brand{font-size:21px;font-weight:800}
+.subtitle{color:var(--muted);font-size:12px}
+.progressBox{
+ margin:20px 0;padding:13px;background:var(--panel);
+ border:1px solid var(--line);border-radius:12px;
+}
+.progressTitle{display:flex;justify-content:space-between;font-size:13px}
+.progressTrack{
+ height:7px;background:#080d18;border-radius:10px;margin-top:10px;overflow:hidden;
+}
+.progressTrack div{
+ height:100%;background:linear-gradient(90deg,var(--blue),var(--green));transition:width .3s;
+}
+nav{display:grid;gap:7px}
+nav button{
+ display:flex;align-items:center;gap:9px;text-align:left;padding:10px;
+ background:transparent;border-color:transparent;font-size:13px;
+}
+nav button.active{background:#22375e;border-color:#5d7fcc}
+nav .num{color:var(--muted);min-width:21px}
+nav .tick{margin-left:auto;color:var(--green)}
+main{min-width:0;width:100%;max-width:1400px;margin:0 auto;padding:30px}
+.hero{
+ padding:24px;border:1px solid var(--line);border-radius:17px;
+ background:linear-gradient(120deg,#1d3053,#132139);margin-bottom:20px;
+}
+.tag{color:var(--green);font-size:12px;font-weight:700;letter-spacing:.08em}
+h1{margin:8px 0;font-size:29px;line-height:1.4}
+h2{font-size:18px;margin:0 0 14px}
+h3{font-size:15px;margin:16px 0 8px}
+p{margin:9px 0}
+.muted{color:var(--muted)}
+.grid{
+ display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+ gap:20px;align-items:start;
+}
+.panel{
+ padding:20px;border:1px solid var(--line);background:var(--panel);
+ border-radius:14px;margin-bottom:20px;min-width:0;
+}
+.lessonText{color:#d0def5}
+.lessonText strong{color:white}
+code{
+ color:#a5edcf;background:#0b1526;padding:2px 5px;
+ border-radius:5px;font-family:Consolas,monospace;
+}
+pre{
+ background:#080f1d;color:#d6e5ff;border:1px solid #263958;
+ padding:15px;border-radius:10px;white-space:pre-wrap;
+ overflow-wrap:anywhere;font:14px/1.8 Consolas,monospace;
+}
+.note{
+ padding:12px 14px;border-left:3px solid var(--blue);
+ border-radius:0 8px 8px 0;background:#182943;
+ color:#c5d6f2;font-size:13px;margin:15px 0;
+}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+.visual{
+ min-height:170px;padding:18px;background:#0b1424;
+ border:1px dashed #395277;border-radius:12px;
+}
+.visualTitle{font-weight:700;color:var(--yellow);margin-bottom:12px}
+.object{
+ padding:13px;background:#182943;border:1px solid #3c567e;
+ border-radius:10px;margin-bottom:10px;
+}
+.object b{display:block;color:var(--blue);margin-bottom:5px}
+.fields{display:grid;grid-template-columns:auto 1fr;gap:5px 15px;font-size:13px}
+.fields span:nth-child(odd){color:var(--muted)}
+.stepCount{font-size:12px;color:var(--muted)}
+.caption{padding:12px 0 0;min-height:62px;color:#c8d9f7;font-size:14px}
+.option{width:100%;text-align:left;display:block;margin-top:9px}
+.option.good{border-color:var(--green);background:#173d34}
+.option.bad{border-color:var(--red);background:#412b3b}
+.feedback{min-height:30px;padding-top:12px;font-size:14px}
+.goodText{color:var(--green)}
+.badText{color:var(--red)}
+textarea,input[type=text],select{
+ padding:10px;color:#e6efff;background:#090f1d;
+ border:1px solid #3a5276;border-radius:9px;
+}
+textarea,input[type=text]{width:100%;font:14px/1.8 Consolas,monospace}
+textarea{min-height:290px;resize:vertical;tab-size:4}
+[hidden]{display:none!important}
+details{margin-top:13px}
+summary{cursor:pointer;color:var(--blue)}
+.footerNav{
+ display:flex;justify-content:space-between;align-items:center;
+ gap:14px;margin-bottom:25px;
+}
+.badge{color:var(--green);font-size:13px}
+.small{font-size:12px}
+.settings{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.cards{
+ display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+ gap:12px;margin-top:16px;
+}
+.labCard{
+ padding:15px;background:#0b1424;border:1px solid #3c567e;border-radius:12px;
+}
+.labCard.selected{border-color:var(--yellow)}
+.labCard h3{margin-top:0;color:var(--blue)}
+.labCard label{display:block;font-size:13px;margin-top:8px}
+.phase{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.phase span{padding:5px 10px;border:1px solid var(--line);border-radius:8px;font-size:12px}
+.phase .active{border-color:var(--green);color:var(--green)}
+#labLog{max-height:310px;overflow:auto}
+#storageNotice{font-size:12px;color:var(--yellow)}
+@media(max-width:1100px){.grid{grid-template-columns:1fr}}
+@media(max-width:700px){
+ .shell{display:block}
+ aside{position:static;height:auto;padding:14px}
+ nav{display:flex;overflow:auto}
+ nav button{min-width:185px}
+ .progressBox{margin:12px 0}
+ main{padding:15px}
+ h1{font-size:24px}
+ .hero,.panel{padding:17px}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside>
+ <div class="brand">✦ YGO Lua 学习室</div>
+ <div class="subtitle">先看懂，再动手，最后独立写卡</div>
+ <div class="progressBox">
+  <div class="progressTitle">
+   <span>第五阶段 · 取对象篇</span><strong id="progressText"></strong>
+  </div>
+  <div class="progressTrack"><div id="progressBar"></div></div>
+ </div>
+ <nav id="nav" aria-label="课程目录"></nav>
+ <details>
+  <summary>学习记录与备份</summary>
+  <p class="small muted">固定课程ID。导出仅包含本阶段进度与草稿，不包含实验台场景。</p>
+  <div class="actions">
+   <button id="exportProgress">导出记录</button>
+   <button id="importProgress">导入记录</button>
+   <button id="clearProgress">清空本阶段</button>
+  </div>
+  <input id="importFile" type="file" accept=".json,application/json" hidden>
+ </details>
+ <p id="storageNotice" aria-live="polite"></p>
+</aside>
+
+<main>
+ <header class="hero">
+  <div class="tag" id="lessonTag"></div>
+  <h1 id="lessonTitle"></h1>
+  <div class="muted" id="lessonGoal"></div>
+ </header>
+
+ <div class="grid">
+  <div>
+   <section class="panel">
+    <h2>① 先理解一个小知识点</h2>
+    <div id="lessonText" class="lessonText"></div>
+    <pre id="example"></pre>
+    <div class="note" id="takeaway"></div>
+   </section>
+   <section class="panel">
+    <h2>② 点击观察</h2>
+    <p class="small muted">预设教学演示，不执行任意Lua。</p>
+    <div class="visual" id="visual"></div>
+    <pre id="stepCode"></pre>
+    <div class="caption" id="stepCaption" aria-live="polite"></div>
+    <div class="actions">
+     <button id="previousStep">← 上一步</button>
+     <button id="nextStep" class="primary">观察下一步 →</button>
+    </div>
+    <div class="stepCount" id="stepCount"></div>
+   </section>
+  </div>
+
+  <div>
+   <section class="panel">
+    <h2>③ 确认你理解了</h2>
+    <p id="question"></p>
+    <div id="options"></div>
+    <div class="feedback" id="quizFeedback" aria-live="polite"></div>
+   </section>
+   <section class="panel">
+    <h2>④ 只写一点点</h2>
+    <p id="exercisePrompt"></p>
+    <pre id="exerciseTemplate"></pre>
+    <label for="answerInput" class="small muted" id="inputLabel">填写空缺部分</label>
+    <input id="answerInput" type="text" autocomplete="off" spellcheck="false">
+    <textarea id="codeInput" hidden spellcheck="false" aria-label="代码骨架练习"></textarea>
+    <div class="actions">
+     <button id="checkAnswer" class="primary">检查练习</button>
+     <button id="resetAnswer">重新填写</button>
+    </div>
+    <div id="exerciseFeedback" class="feedback" aria-live="polite"></div>
+    <details id="hintDetails"><summary>给我一个提示</summary><p id="exerciseHint"></p></details>
+    <details id="solutionDetails"><summary>查看参考答案</summary><pre id="exerciseSolution"></pre></details>
+   </section>
+   <section class="panel">
+    <h2>本课完成条件</h2>
+    <div id="checklist"></div>
+    <p class="small muted">查看答案不自动通过；练习是受限骨架检查，不是Lua编译器。</p>
+   </section>
+  </div>
+ </div>
+
+ <div class="footerNav">
+  <button id="previousLesson">← 上一课</button>
+  <span id="lessonStatus" class="badge"></span>
+  <button id="nextLesson" class="primary">下一课 →</button>
+ </div>
+
+ <section class="panel">
+  <h2>⑤ 取对象与处理实验台</h2>
+  <p>教学卡文：以对方场上1只表侧表示怪兽为对象才能发动；那只怪兽破坏。</p>
+  <div class="note">
+   固定规则模拟，不读取上方代码。所有候选卡均视为可取对象、无免疫、无破坏抗性，
+   不模拟额外怪兽区布局、完整连锁或替代处理。
+   “离场”“离场后返回”按钮显式模拟旧关联断开。
+   本例处理时不要求对象仍为表侧。
+  </div>
+
+  <div class="settings">
+   <label>发动玩家
+    <select id="labPlayer">
+     <option value="0">玩家0</option>
+     <option value="1">玩家1</option>
+    </select>
+   </label>
+   <label><input id="labNegated" type="checkbox">处理时效果被无效</label>
+   <button id="resetLab">重置场景</button>
+  </div>
+  <p class="small muted">
+   切换玩家会重置场景。发动前可调整表里侧；实际选中对象后，
+   用下方按钮改变它的状态，再点击处理。
+  </p>
+
+  <div id="phase" class="phase"></div>
+  <div id="labCards" class="cards"></div>
+  <div id="targetStatus" style="margin-top:16px"></div>
+
+  <div class="actions">
+   <button id="initialize">1. 初始化</button>
+   <button id="inspect">2. 检查合法对象</button>
+   <button id="activate" class="primary">3. 选择对象并发动</button>
+  </div>
+  <div class="actions">
+   <button id="setFacedown">使对象变为里侧</button>
+   <button id="leaveField">使对象离场</button>
+   <button id="leaveReturn">使对象离场后返回</button>
+   <button id="resolve" class="primary">4. 处理效果</button>
+  </div>
+
+  <pre id="labLog" aria-live="polite"></pre>
+  <details>
+   <summary>建议完成的四个实验</summary>
+   <ol>
+    <li>正常选中对方表侧怪兽，处理时成功破坏。</li>
+    <li>选中后使对象变为里侧，本例仍会尝试破坏。</li>
+    <li>选中后使对象离场，不会改选另一只怪兽。</li>
+    <li>对象离场再返回，旧关联仍已断开，不能当成原对象继续处理。</li>
+   </ol>
+  </details>
+ </section>
+
+ <section class="panel">
+  <details><summary>随时可查：本阶段术语小字典</summary><div id="glossary"></div></details>
+ </section>
+
+ <p class="small muted">
+  现代EDOPro常见写法。最终示例需配套普通魔法卡数据库记录，
+  脚本放入客户端配置的script搜索路径，并在实际引擎中验证。
+ </p>
+</main>
+</div>
+
+<script>
+"use strict";
+
+/* ==================================================
+ A. 第五阶段课程数据 · 新手节奏修订版
+ 替换原A区域；保留B、C区域及页面HTML/CSS。
+ ================================================== */
+
+const S=(code,caption,fields)=>({code,caption,fields});
+
+const filterCode=`function s.filter(c)
+    return c:IsFaceup()
+end`;
+
+const targetCode=`function s.target(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
+    if chkc then
+        return chkc:IsLocation(LOCATION_MZONE)
+            and chkc:IsControler(1-tp)
+            and s.filter(chkc)
+    end
+    if chk==0 then
+        return Duel.IsExistingTarget(s.filter,tp,0,LOCATION_MZONE,1,nil)
+    end
+    Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_DESTROY)
+    local g=Duel.SelectTarget(tp,s.filter,tp,0,LOCATION_MZONE,1,1,nil)
+    Duel.SetOperationInfo(0,CATEGORY_DESTROY,g,1,0,0)
+end`;
+
+const operationCode=`function s.operation(e,tp,eg,ep,ev,re,r,rp)
+    local tc=Duel.GetFirstTarget()
+    if tc and tc:IsRelateToEffect(e) then
+        Duel.Destroy(tc,REASON_EFFECT)
+    end
+end`;
+
+const completeScript=`local s,id=GetID()
+
+function s.initial_effect(c)
+    local e1=Effect.CreateEffect(c)
+    e1:SetCategory(CATEGORY_DESTROY)
+    e1:SetType(EFFECT_TYPE_ACTIVATE)
+    e1:SetProperty(EFFECT_FLAG_CARD_TARGET)
+    e1:SetCode(EVENT_FREE_CHAIN)
+    e1:SetTarget(s.target)
+    e1:SetOperation(s.operation)
+    c:RegisterEffect(e1)
+end
+
+${filterCode}
+
+${targetCode}
+
+${operationCode}`;
+
+const STAGE={
+ id:"stage-05-beginner-v2",
+ startNumber:39,
+ lessons:[
+
+/* 39 */
+{
+ id:"concept-before-api",
+ title:"先理解：什么是取对象",
+ goal:"这一课不记新函数，只分清两种行为。",
+ text:`
+ <p>上一阶段，你能找出“对方怪兽区中有哪些表侧怪兽”。</p>
+ <p>假设找到了A和B。此时你只知道<strong>有哪些候选卡</strong>，
+ 还没有指定这次效果要对哪一张卡进行处理。</p>
+ <p>本阶段卡文是：<strong>以对方场上1只表侧表示怪兽为对象才能发动；
+ 那只怪兽破坏。</strong></p>
+ <p>这表示玩家要在发动时，从合法候选中指定一张，
+ 作为<strong>本次发动的对象</strong>。</p>
+ <p>“查询候选”和“指定本次对象”不是同一件事。
+ 本课先不要求记住任何新的API名称。</p>`,
+ example:`查询结果：A、B都符合条件
+
+本次发动：选择A作为对象
+
+等待处理：这次效果记住的是A，不是“随便一张符合条件的卡”`,
+ takeaway:"候选可以有多张，本次对象是发动时具体指定的卡。",
+ steps:[
+ S("-- 先看场面","对方有两只符合要求的表侧怪兽。",
+   [["候选","A、B"],["本次对象","尚未指定"]]),
+ S("-- 玩家发动，指定A","本次效果的对象确定为A。",
+   [["本次对象","A"],["B","没有被这次效果选中"]]),
+ S("-- 进入等待处理阶段","指定对象还不等于已经破坏。",
+   [["A是否已被破坏","没有"],["本次对象","仍是A"]])
+ ],
+ question:"查询得到A、B两张候选，是否等于它们都已经成为本次效果的对象？",
+ options:["是，查到就自动成为对象","不是，还要在发动时指定对象","只有同名时才算"],
+ correct:1,
+ explanation:"查询只是找候选；取对象是进一步指定本次效果对象。",
+ prompt:"本次发动明确选择了A。填写本次对象的字母。",
+ template:"候选：A、B\n玩家选择：A\n本次对象：____",
+ answer:"A",
+ hint:"本题不需要任何新函数名，只填写玩家已经选择的那张卡。"
+},
+
+/* 40 */
+{
+ id:"destroy-category-first",
+ title:"破坏类别：复习SetCategory",
+ goal:"沿用学过的函数，只认识一个新类别常量。",
+ text:`
+ <p>第二阶段已经学过：</p>
+ <p><code>e1:SetCategory(CATEGORY_DRAW)</code>：给效果设置抽卡类别。</p>
+ <p>现在效果从抽卡换成破坏，对应类别使用
+ <code>CATEGORY_DESTROY</code>。</p>
+ <p>函数仍是你认识的SetCategory，只是参数换成了破坏类别。</p>
+ <p>它不执行破坏，不选择对象，也不会自动生成处理函数。</p>`,
+ example:`-- 以前：抽卡类别
+e1:SetCategory(CATEGORY_DRAW)
+
+-- 现在：破坏类别
+e1:SetCategory(CATEGORY_DESTROY)`,
+ takeaway:"CATEGORY_DESTROY是分类标签，不是破坏命令。",
+ steps:[
+ S("e1:SetCategory(CATEGORY_DRAW)","回顾已经学过的抽卡类别。",
+   [["类别","抽卡"],["是否立即抽卡","否"]]),
+ S("e1:SetCategory(CATEGORY_DESTROY)","把当前教学效果配置为破坏类别。",
+   [["类别","破坏"],["是否立即破坏","否"]]),
+ S("-- 对象还没有选择","类别不能替代选择和实际处理。",
+   [["本次对象","未选择"],["破坏动作","尚未执行"]])
+ ],
+ question:"设置CATEGORY_DESTROY后，引擎会自动破坏一张卡吗？",
+ options:["会","不会，只设置类别","只会自动破坏第一张"],
+ correct:1,
+ explanation:"SetCategory描述类别，不执行对应动作。",
+ prompt:"只填写破坏类别常量。",
+ template:"e1:SetCategory(____)",
+ answer:"CATEGORY_DESTROY",
+ hint:"沿用CATEGORY_前缀，破坏对应DESTROY。"
+},
+
+/* 41 */
+{
+ id:"property-with-comparison",
+ title:"取对象属性：SetProperty",
+ goal:"用熟悉的类别配置，对照理解属性配置。",
+ text:`
+ <p>现在再认识一个配置函数：
+ <code>e1:SetProperty(...)</code>。</p>
+ <p>它设置效果的<strong>属性标记</strong>。
+ 本课只学其中一个：
+ <code>EFFECT_FLAG_CARD_TARGET</code>。</p>
+ <p>这个标记声明：本效果是取对象效果。</p>
+ <p>两行分别说明不同事情：</p>
+ <p><code>SetCategory(CATEGORY_DESTROY)</code>：涉及破坏处理。<br>
+ <code>SetProperty(EFFECT_FLAG_CARD_TARGET)</code>：这是取对象效果。</p>
+ <p>只设置属性不会替玩家选卡，真正的选择之后再学。</p>`,
+ example:`e1:SetCategory(CATEGORY_DESTROY)
+e1:SetProperty(EFFECT_FLAG_CARD_TARGET)`,
+ takeaway:"类别说明处理种类，CARD_TARGET属性说明本效果取对象。",
+ steps:[
+ S("e1:SetCategory(CATEGORY_DESTROY)","说明处理类别。",
+   [["类别","破坏"]]),
+ S("e1:SetProperty(EFFECT_FLAG_CARD_TARGET)","说明取对象属性。",
+   [["取对象属性","已设置"],["实际对象","尚未选择"]]),
+ S("-- 配置完成了一部分","还需要检查、选择和处理代码。",
+   [["属性是否替你选卡","不会"]])
+ ],
+ question:"哪一项负责声明本效果取对象？",
+ options:["CATEGORY_DESTROY","EFFECT_FLAG_CARD_TARGET","REASON_EFFECT"],
+ correct:1,
+ explanation:"EFFECT_FLAG_CARD_TARGET是本课使用的取对象属性标记。",
+ prompt:"只填写属性标记，不必默写整行。",
+ template:"e1:SetProperty(____)",
+ answer:"EFFECT_FLAG_CARD_TARGET",
+ hint:"完整名称是EFFECT_FLAG_CARD_TARGET。"
+},
+
+/* 42 */
+{
+ id:"existing-target-range",
+ title:"检查对象：先看筛选与范围",
+ goal:"先认识IsExistingTarget的用途，再复习已有参数。",
+ text:`
+ <p><code>Duel.IsExistingTarget(...)</code>用于检查：
+ 指定范围中是否存在足够数量的合法对象。</p>
+ <p>它返回true或false，不选择对象，不破坏卡片。</p>
+ <p>本课先看前四个参数：</p>
+ <p>① <code>s.filter</code>：用哪个筛选函数；<br>
+ ② <code>tp</code>：搜索范围相对哪位玩家；<br>
+ ③ <code>0</code>：不搜索tp一侧；<br>
+ ④ <code>LOCATION_MZONE</code>：搜索另一侧怪兽区。</p>
+ <p>最后的<code>1,nil</code>先由页面提供，下一课分别解释。</p>
+ <p>该API还会考虑目标相关的合法性。
+ 不能把它一律替换为普通GetMatchingGroup的数量检查。</p>`,
+ example:`Duel.IsExistingTarget(
+    s.filter,        -- 已学：筛选函数
+    tp,              -- 已学：参照玩家
+    0,               -- 已学：己方不搜索
+    LOCATION_MZONE,  -- 已学：对方怪兽区
+    1,               -- 下一课解释
+    nil              -- 下一课解释
+)`,
+ takeaway:"IsExistingTarget是布尔检查，前面的filter和区域概念沿用上一阶段。",
+ steps:[
+ S("-- filter要求表侧","假设对方怪兽区只有里侧怪兽。",
+   [["合法对象","没有"],["检查结果","false"]]),
+ S("-- 对方出现合法表侧怪兽A","本场景有合适对象。",
+   [["检查结果","true"],["是否已选择A","没有"]]),
+ S("-- 重复检查","检查次数增加，不会变成实际选择。",
+   [["实际选卡次数","0"]])
+ ],
+ question:"IsExistingTarget返回true，是否说明已经替玩家选好对象？",
+ options:["是","不是，只说明检查通过","数量为1时是"],
+ correct:1,
+ explanation:"检查存在性和实际选择分属不同步骤。",
+ prompt:"保持其余参数不变，填写对方怪兽区。",
+ template:"Duel.IsExistingTarget(s.filter,tp,0,____,1,nil)",
+ answer:"LOCATION_MZONE",
+ hint:"本题只复习区域，新的检查函数名已经提供。"
+},
+
+/* 43 */
+{
+ id:"existing-target-count-exception",
+ title:"检查对象：数量与nil",
+ goal:"补齐IsExistingTarget的最后两个参数。",
+ text:`
+ <p>继续上一课的同一条检查：</p>
+ <p>第五个参数<code>1</code>表示<strong>至少需要一张</strong>合法对象。</p>
+ <p>第六个参数是排除对象；本例填<code>nil</code>，
+ 表示没有额外指定要排除的卡片。</p>
+ <p>这里的1不是玩家1，也不是一回合一次。</p>
+ <p>检查返回true，只说明至少有足够的合法对象。
+ 到底选择哪张，之后由选择函数完成。</p>`,
+ example:`Duel.IsExistingTarget(
+    s.filter,tp,0,LOCATION_MZONE,
+    1,   -- 至少存在1张
+    nil  -- 本例不额外排除卡片
+)`,
+ takeaway:"数量参数问“至少有几张”，nil表示本例没有额外排除对象。",
+ steps:[
+ S("-- 要求至少1张","没有合法对象时，检查失败。",
+   [["要求","1张"],["实际","0张"],["结果","false"]]),
+ S("-- 要求至少1张","有两张也满足至少一张。",
+   [["要求","1张"],["实际","2张"],["结果","true"]]),
+ S("-- 排除参数为nil","没有额外指定排除某张卡。",
+   [["排除对象","无"],["是否等于忽略filter","不是"]])
+ ],
+ question:"有两张合法对象，要求至少1张，检查应返回什么？",
+ options:["true","false","卡片编号"],
+ correct:0,
+ explanation:"两张满足“至少一张”，检查不会因此自动选两张。",
+ prompt:"本卡需要至少一张合法对象，填写数量参数。",
+ template:"Duel.IsExistingTarget(s.filter,tp,0,LOCATION_MZONE,____,nil)",
+ answer:"1",
+ hint:"这里是最低存在数量，不是玩家编号。"
+},
+
+/* 44 */
+{
+ id:"select-target-two-players",
+ title:"选择对象：两个玩家参数",
+ goal:"先分清谁选择、相对谁搜索。",
+ text:`
+ <p><code>Duel.SelectTarget(...)</code>在正式target阶段执行选择，
+ 并把所选卡登记为本次效果对象。</p>
+ <p>这个调用中有两个tp，位置和职责不同：</p>
+ <p>第一个tp：<strong>由谁操作选择</strong>。<br>
+ 第二个tp：<strong>搜索区域相对谁解释</strong>。</p>
+ <p>本课都是发动玩家，因此写成相同的tp。
+ 不要因为看起来重复就删掉其中一个。</p>
+ <p>后面的<code>1,1,nil</code>先提供，下一课再解释。</p>`,
+ example:`Duel.SelectTarget(
+    tp,              -- 谁操作选择
+    s.filter,        -- 筛选函数
+    tp,              -- 区域的参照玩家
+    0,               -- 参照玩家一侧不搜索
+    LOCATION_MZONE,  -- 搜索另一侧怪兽区
+    1,1,nil          -- 下一课解释
+)`,
+ takeaway:"第一个tp是选择者，第二个tp是搜索区域的参照玩家。",
+ steps:[
+ S("-- 发动者是玩家0","本课由玩家0操作选择。",
+   [["第一个tp","0"],["职责","选择者"]]),
+ S("-- 搜索相对玩家0解释","己方0、对方怪兽区，实际搜索玩家1。",
+   [["第二个tp","0"],["搜索一侧","玩家1"]]),
+ S("-- 玩家0选择A","正式选择会登记对象。",
+   [["操作选择的人","玩家0"],["选中的卡","玩家1的A"]])
+ ],
+ question:"为什么SelectTarget里不能随便删掉一个tp？",
+ options:["因为两个参数位置承担不同职责","因为Lua要求变量必须重复","为了让双方各选一次"],
+ correct:0,
+ explanation:"一个是选择玩家，另一个是区域参照玩家。",
+ prompt:"填写由发动玩家操作选择的参数，其他部分已给出。",
+ template:"Duel.SelectTarget(____,s.filter,tp,0,LOCATION_MZONE,1,1,nil)",
+ answer:"tp",
+ hint:"本题填最前面的选择玩家。"
+},
+
+/* 45 */
+{
+ id:"select-target-min-max",
+ title:"选择对象：最少与最多",
+ goal:"解释SelectTarget中的两个1。",
+ text:`
+ <p>在区域参数后面，SelectTarget接收<strong>最少选择数量</strong>
+ 和<strong>最多选择数量</strong>。</p>
+ <p>本课要求恰好选择一张，所以写<code>1,1</code>。</p>
+ <p>它们不是两个玩家编号，也不是执行两次选择。</p>
+ <p>最后的nil与之前类似：本例没有额外指定排除对象。</p>
+ <p>先只掌握恰好一张。允许选择多张的效果之后再单独学习。</p>`,
+ example:`Duel.SelectTarget(
+    tp,s.filter,tp,0,LOCATION_MZONE,
+    1,   -- 最少选择1张
+    1,   -- 最多选择1张
+    nil  -- 不额外指定排除对象
+)`,
+ takeaway:"最少1、最多1，合起来就是恰好选1张。",
+ steps:[
+ S("-- 合法候选有A、B、C","候选多不代表要全部选中。",
+   [["候选数","3"],["最少选择","1"],["最多选择","1"]]),
+ S("-- 玩家选择A","已达到要求。",
+   [["所选","A"],["选择数量","1"]]),
+ S("-- 不能再顺便选择B","本例最多只允许一张。",
+   [["能否同时选A和B","不能"]])
+ ],
+ question:"SelectTarget中的1,1表示什么？",
+ options:["两名玩家各选一次","最少1张、最多1张","需要选择两张"],
+ correct:1,
+ explanation:"这是数量下限与上限，因此本例必须恰好选一张。",
+ prompt:"本例最多选择一张，填写最大数量。",
+ template:"Duel.SelectTarget(tp,s.filter,tp,0,LOCATION_MZONE,1,____,nil)",
+ answer:"1",
+ hint:"前面的1已经是最少数量，本题填写最多数量。"
+},
+
+/* 46 */
+{
+ id:"select-target-return-group",
+ title:"选择后的返回值",
+ goal:"把SelectTarget与已经学过的Group连接起来。",
+ text:`
+ <p>SelectTarget完成选择后，会返回包含所选卡片的<strong>Group</strong>。</p>
+ <p>常见写法：<code>local g=Duel.SelectTarget(...)</code>。</p>
+ <p>即使只选了一张，返回值仍是Group，不自动变成单张Card。</p>
+ <p>这里有两件事同时完成：登记本次对象，并把所选集合交给变量g。</p>
+ <p>下一课会先补上选择提示，之后再用g登记处理信息。</p>`,
+ example:`local g=Duel.SelectTarget(
+    tp,s.filter,tp,0,LOCATION_MZONE,1,1,nil)
+
+-- g 是包含所选卡的Group
+-- 本例成功选1张后，g:GetCount()为1`,
+ takeaway:"只选一张，返回值仍然是Group。",
+ steps:[
+ S("-- 玩家选择A","候选B没有被选择。",
+   [["所选","A"]]),
+ S("local g=Duel.SelectTarget(...)","g引用包含A的Group。",
+   [["g类型","Group"],["内部卡片","A"]]),
+ S("g:GetCount()","用上一阶段学过的方法取得数量。",
+   [["返回数量","1"],["A是否已被破坏","没有"]])
+ ],
+ question:"只选择一张时，SelectTarget的返回值是什么？",
+ options:["Card对象","Group对象","玩家编号"],
+ correct:1,
+ explanation:"选择数量为一不改变返回类型。",
+ prompt:"填写读取所选Group g的数量的方法调用。",
+ template:"local count=____",
+ answer:"g:GetCount()",
+ hint:"这是上一阶段已经学过的Group方法。"
+},
+
+/* 47 */
+{
+ id:"hint-explained",
+ title:"Hint：选择提示",
+ goal:"把提示类型、接收者、内容分别看清楚。",
+ text:`
+ <p><code>Duel.Hint</code>可以提供界面提示。
+ 本课使用这条固定的选择提示写法：</p>
+ <p>① <code>HINT_SELECTMSG</code>：提示类型是选择消息。<br>
+ ② <code>tp</code>：给哪位玩家显示。<br>
+ ③ <code>HINTMSG_DESTROY</code>：提示这次选择与破坏有关。</p>
+ <p>HINTMSG_DESTROY用于提示，不是SetCategory需要的CATEGORY_DESTROY。</p>
+ <p>提示不选卡、不破坏。通常写在SelectTarget前面。</p>`,
+ example:`Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_DESTROY)
+local g=Duel.SelectTarget(tp,s.filter,tp,0,LOCATION_MZONE,1,1,nil)`,
+ takeaway:"Hint显示提示；SelectTarget执行选择；它们都不执行破坏。",
+ steps:[
+ S("Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_DESTROY)",
+   "准备显示破坏对象选择提示。",
+   [["类型","选择消息"],["接收者","tp"],["内容","破坏相关选择"]]),
+ S("-- 提示已经显示","尚未登记任何对象。",
+   [["实际选卡","未执行"],["破坏","未执行"]]),
+ S("Duel.SelectTarget(...)","下一行才进行对象选择。",
+   [["本次对象","玩家选中的卡"]])
+ ],
+ question:"Hint中的tp表示什么？",
+ options:["提示接收玩家","破坏数量","卡片编号"],
+ correct:0,
+ explanation:"这条调用的第二个参数是接收提示的玩家。",
+ prompt:"选择用于破坏的卡时，填写提示内容常量。",
+ template:"Duel.Hint(HINT_SELECTMSG,tp,____)",
+ answer:"HINTMSG_DESTROY",
+ hint:"这里是HINTMSG_前缀，不是CATEGORY_前缀。"
+},
+
+/* 48 */
+{
+ id:"destroy-operation-info",
+ title:"登记本次破坏信息",
+ goal:"复习SetOperationInfo，并解释破坏版参数。",
+ text:`
+ <p>你学过抽卡版SetOperationInfo。
+ 现在对象已经选好，可以登记预计破坏的信息。</p>
+ <p>本例六个参数分别是：</p>
+ <p>① <code>0</code>：当前连锁。<br>
+ ② <code>CATEGORY_DESTROY</code>：预计处理类别为破坏。<br>
+ ③ <code>g</code>：本次选择的卡片Group。<br>
+ ④ <code>1</code>：本例涉及一张卡。<br>
+ ⑤ <code>0</code>：本例不额外使用的玩家信息。<br>
+ ⑥ <code>0</code>：本例不额外使用的附加信息。</p>
+ <p>最后两个0按这条指定Group的破坏模板填写，
+ 不要把它理解成“破坏玩家0的卡”。</p>
+ <p>具体类别的参数用法不同，不能把抽卡版末尾的1机械搬到所有类别。</p>`,
+ example:`Duel.SetOperationInfo(
+    0,
+    CATEGORY_DESTROY,
+    g,
+    1,
+    0,
+    0
+)`,
+ takeaway:"登记预计处理信息，不等于已经完成破坏。",
+ steps:[
+ S("-- SelectTarget返回g","g里包含对象A。",
+   [["g","包含A"],["A是否已破坏","否"]]),
+ S("Duel.SetOperationInfo(0,CATEGORY_DESTROY,g,1,0,0)",
+   "登记预计破坏所选的一张卡。",
+   [["类别","破坏"],["涉及集合","g"],["数量","1"]]),
+ S("-- 仍在发动手续中","实际破坏要等operation。",
+   [["实际破坏次数","0"]])
+ ],
+ question:"这条调用中的g是什么？",
+ options:["选择者编号","本次所选卡片的Group","破坏成功数量"],
+ correct:1,
+ explanation:"g是SelectTarget返回的所选集合。",
+ prompt:"填写登记信息时使用的所选集合变量。",
+ template:"Duel.SetOperationInfo(0,CATEGORY_DESTROY,____,1,0,0)",
+ answer:"g",
+ hint:"上一课用local g保存SelectTarget返回值。"
+},
+
+/* 49 */
+{
+ id:"get-first-target-return",
+ title:"处理时取回原对象",
+ goal:"只认识GetFirstTarget，不急着处理关联。",
+ text:`
+ <p>进入operation后，需要知道之前选中了哪张卡。</p>
+ <p><code>Duel.GetFirstTarget()</code>取得本次效果对象中的第一张卡。</p>
+ <p>本例只选一张，所以可以这样取得它。
+ 返回的是<strong>Card对象</strong>，不是Group。</p>
+ <p>常见变量名tc表示target card，仅是命名习惯。</p>
+ <p>取得引用还不说明可以直接处理；关联检查下一课再学。</p>`,
+ example:`local tc=Duel.GetFirstTarget()
+
+-- tc：单张Card对象
+-- 不等于SelectTarget返回的Group g`,
+ takeaway:"SelectTarget返回Group；GetFirstTarget取得其中的单张对象卡。",
+ steps:[
+ S("-- 发动时选择A","本次对象已经登记。",
+   [["对象","A"]]),
+ S("local tc=Duel.GetFirstTarget()","处理时取得原对象的Card引用。",
+   [["tc","Card对象A"]]),
+ S("-- 尚未判断能否继续处理","取得引用与确认关联是不同步骤。",
+   [["已完成","取得对象"],["尚未完成","关联检查"]])
+ ],
+ question:"GetFirstTarget返回的tc与SelectTarget返回的g类型相同吗？",
+ options:["相同，都是Group","不同，tc是Card，g是Group","不同，tc是数字"],
+ correct:1,
+ explanation:"本例的tc是单张对象卡；g是所选卡集合。",
+ prompt:"填写取得第一个对象的函数调用。",
+ template:"local tc=____",
+ answer:"Duel.GetFirstTarget()",
+ hint:"Duel函数使用点号，本次调用不传参数。"
+},
+
+/* 50 */
+{
+ id:"why-relation-matters",
+ title:"为什么要检查关联",
+ goal:"先通过场景理解问题，不急着背函数。",
+ text:`
+ <p>发动时选中的卡，可能在等待处理期间离场。</p>
+ <p>“我还记得选了哪张卡”不等于“现在还能按原对象处理它”。</p>
+ <p>在本课场景中，对象离场会断开与旧效果的关联。</p>
+ <p>即使它之后返回，也不能仅凭卡名相同或仍能看到它，就当旧关联没有变化。</p>
+ <p>这一课只理解为什么需要额外检查，下一课再介绍API。</p>`,
+ example:`发动：选择A
+
+等待处理：A离场
+
+处理：不能改选B，也不能假设原关联仍在。`,
+ takeaway:"原对象离场，不能直接按“我还记得它”继续处理。",
+ steps:[
+ S("-- 发动时对象为A","旧关联存在。",
+   [["对象","A"],["旧关联","存在"]]),
+ S("-- A离场","本课场景中旧关联断开。",
+   [["A位置","已离场"],["旧关联","断开"]]),
+ S("-- A随后返回","返回不自动恢复与旧效果的关联。",
+   [["场上看到A","是"],["旧关联自动恢复","否"]])
+ ],
+ question:"对象离场后再返回，可以只因为卡名一样就当旧关联仍在吗？",
+ options:["可以","不可以","同名且攻击力一样就可以"],
+ correct:1,
+ explanation:"对象状态与效果关联不能靠卡名或数值推断。",
+ prompt:"A离场后旧关联已经断开，是否能自动改选B？填写“能”或“不能”。",
+ template:"能否自动改选B：____",
+ answer:"不能",
+ hint:"本次发动选择的是A，不能擅自替换对象。"
+},
+
+/* 51 */
+{
+ id:"is-relate-method",
+ title:"IsRelateToEffect：检查关联",
+ goal:"为已经理解的关联问题，补上对应方法。",
+ text:`
+ <p><code>tc:IsRelateToEffect(e)</code>询问：
+ 卡片tc是否仍与效果e关联。</p>
+ <p>冒号前的tc是对象卡；括号里的e是当前效果对象。</p>
+ <p>前面的<code>tc and</code>利用Lua短路判断：
+ 没有tc时，就不继续调用它的方法。</p>
+ <p>这个表达式只做判断，不恢复关联、不选择新对象、不破坏卡片。</p>`,
+ example:`local tc=Duel.GetFirstTarget()
+if tc and tc:IsRelateToEffect(e) then
+    -- 再进行实际处理
+end`,
+ takeaway:"先确认对象存在，再检查这张卡与当前效果的关联。",
+ steps:[
+ S("tc","先确认取得了对象。",
+   [["tc存在","是"],["继续下一项","是"]]),
+ S("tc:IsRelateToEffect(e)","正常留场场景中返回true。",
+   [["检查对象","tc"],["检查哪个效果","e"],["结果","true"]]),
+ S("-- 另一个场景：旧关联断开","结果为false，跳过后续处理。",
+   [["结果","false"],["是否选择替代对象","否"]])
+ ],
+ question:"IsRelateToEffect括号内的e是什么？",
+ options:["当前效果对象","玩家编号","卡片数量"],
+ correct:0,
+ explanation:"这里检查的是tc与这个效果e之间的关联。",
+ prompt:"只填写关联方法需要的参数。",
+ template:"if tc and tc:IsRelateToEffect(____) then\nend",
+ answer:"e",
+ hint:"沿用已经学过的处理回调参数e。"
+},
+
+/* 52 */
+{
+ id:"activation-filter-vs-resolution",
+ title:"为什么不重新检查表侧",
+ goal:"只针对本课卡文，区分发动条件与处理条件。",
+ text:`
+ <p>本课卡文：以对方场上1只表侧表示怪兽为对象才能发动；
+ <strong>那只怪兽破坏</strong>。</p>
+ <p>“表侧”是选择对象时的要求。
+ 本课处理文字没有再要求“仍为表侧”。</p>
+ <p>因此在本教学场景中，对象只是变成里侧、仍与效果关联，
+ 不能单凭IsFaceup变成false就跳过破坏。</p>
+ <p><strong>这不是说所有效果都不重查条件。</strong>
+ 具体处理要求要按对应卡文和规则判断，不能把本例结论套到所有卡。</p>`,
+ example:`-- 本课处理检查：
+if tc and tc:IsRelateToEffect(e) then
+    -- 尝试破坏
+end
+
+-- 不因为“原filter检查表侧”
+-- 就自动再添加tc:IsFaceup()`,
+ takeaway:"不能机械地把发动时filter全部搬到处理阶段。",
+ steps:[
+ S("-- 发动时选择表侧A","对象合法。",
+   [["表侧","是"],["关联","存在"]]),
+ S("-- A变成里侧，没有离场","本场景中仍关联。",
+   [["表侧","否"],["关联","仍存在"]]),
+ S("-- 按本课处理文字判断","不因单纯变里侧而跳过破坏。",
+   [["本例是否继续尝试处理","是"]])
+ ],
+ question:"本例A变里侧但仍关联，是否应仅因不再表侧就跳过破坏？",
+ options:["应该，所有filter都必须重跑","不应该，本课没有这项处理要求","应该改选其他表侧怪兽"],
+ correct:1,
+ explanation:"应依据具体处理要求，而不是机械复制发动filter。",
+ prompt:"本课这个场景是否继续尝试处理？填写“是”或“否”。",
+ template:"对象变里侧，但仍关联。\n按本课卡文继续尝试处理：____",
+ answer:"是",
+ hint:"限定在本课“那只怪兽破坏”的场景，不泛化到所有效果。"
+},
+
+/* 53 */
+{
+ id:"destroy-api-explained",
+ title:"Destroy：实际请求破坏",
+ goal:"认识两个参数，并区分请求与结果。",
+ text:`
+ <p><code>Duel.Destroy(tc,REASON_EFFECT)</code>请求因效果破坏卡片tc。</p>
+ <p>第一个参数是要处理的卡片；第二个参数是原因。</p>
+ <p><code>REASON_EFFECT</code>之前抽卡时已经学过，表示由效果引起。</p>
+ <p>不是传CATEGORY_DESTROY，也不是传HINTMSG_DESTROY。
+ 三个常量用于不同位置。</p>
+ <p>实际结果由引擎根据抗性、免疫、替代等规则处理，
+ 调用Destroy不保证破坏成功。</p>
+ <p>因此也不能机械地把“必须可被破坏”追加成所有效果的取对象条件。</p>`,
+ example:`-- 类别
+e1:SetCategory(CATEGORY_DESTROY)
+
+-- 提示
+Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_DESTROY)
+
+-- 实际请求破坏
+Duel.Destroy(tc,REASON_EFFECT)`,
+ takeaway:"CATEGORY是分类，HINTMSG是提示，Destroy才是实际处理调用。",
+ steps:[
+ S("-- 取得对象并通过关联检查","准备对tc进行处理。",
+   [["tc","A"],["关联","true"]]),
+ S("Duel.Destroy(tc,REASON_EFFECT)","把破坏请求交给引擎。",
+   [["处理卡片","A"],["原因","效果"]]),
+ S("-- 本教学场景无抗性与替代","示意破坏成功，但真实情况仍由引擎判定。",
+   [["教学结果","成功破坏"],["任意情况都保证成功吗","不保证"]])
+ ],
+ question:"Destroy的第二个参数应该使用本课哪个常量？",
+ options:["REASON_EFFECT","CATEGORY_DESTROY","HINTMSG_DESTROY"],
+ correct:0,
+ explanation:"第二个参数是原因，不是分类或提示内容。",
+ prompt:"填写因效果破坏tc的完整调用。",
+ template:"____",
+ answer:"Duel.Destroy(tc,REASON_EFFECT)",
+ hint:"卡片tc在前，原因REASON_EFFECT在后。"
+},
+
+/* 54 */
+{
+ id:"assemble-operation-only",
+ title:"先组合处理函数",
+ goal:"只组装已经学过的三个步骤。",
+ text:`
+ <p>先不写完整卡片，只完成operation。</p>
+ <p>第一步：GetFirstTarget取得原对象。</p>
+ <p>第二步：确认tc存在，并检查IsRelateToEffect。</p>
+ <p>第三步：调用Destroy请求破坏。</p>
+ <p>这次练习不引入任何新API。其他回调参数按脚手架保留。</p>`,
+ example:operationCode,
+ takeaway:"取得原对象 → 检查关联 → 请求破坏。",
+ steps:[
+ S("local tc=Duel.GetFirstTarget()","先取得原对象。",
+   [["已完成","取得Card引用"]]),
+ S("if tc and tc:IsRelateToEffect(e) then","再判断能否继续本例处理。",
+   [["条件","对象存在且关联"]]),
+ S("Duel.Destroy(tc,REASON_EFFECT)","条件成立才请求破坏。",
+   [["动作","请求破坏"],["是否重选对象","否"]])
+ ],
+ question:"哪个步骤顺序正确？",
+ options:["先破坏，再检查关联","先取得对象，再检查关联，再请求破坏","处理时先重新选一张"],
+ correct:1,
+ explanation:"对原对象进行关联检查，通过后才执行处理。",
+ prompt:"补全处理函数里的两处空缺。",
+ template:"受限骨架练习。其他部分已提供。",
+ full:true,
+ starter:`function s.operation(e,tp,eg,ep,ev,re,r,rp)
+    local tc=____
+    if tc and tc:IsRelateToEffect(e) then
+        ____
+    end
+end`,
+ answer:operationCode,
+ hint:"第一处取得对象，第二处请求因效果破坏。"
+},
+
+/* 55 */
+{
+ id:"is-controler-before-chkc",
+ title:"IsControler：判断控制者",
+ goal:"先学单卡检查，下一课才介绍它的用途。",
+ text:`
+ <p><code>c:IsControler(player)</code>判断卡片当前是否由指定玩家控制。</p>
+ <p>本课处理场上怪兽，因此可以用它判断是否是对方控制的怪兽。</p>
+ <p><code>c:IsControler(1-tp)</code>表示检查是否由另一位玩家控制。</p>
+ <p>它不改变控制权，也不等于检查卡片原本归谁所有。</p>
+ <p>这个API的实际拼写是<strong>IsControler</strong>，
+ Controler中只有一个l，不要按英语习惯自行改名。</p>`,
+ example:`c:IsControler(tp)    -- 当前由参照玩家控制？
+c:IsControler(1-tp)  -- 当前由另一位玩家控制？`,
+ takeaway:"IsControler判断当前控制者，不改变控制权，也不是检查所有者。",
+ steps:[
+ S("-- tp=0，A当前由玩家1控制","A是相对tp的对方怪兽。",
+   [["tp","0"],["A控制者","1"]]),
+ S("c:IsControler(1-tp)","1-tp等于1，因此返回true。",
+   [["结果","true"]]),
+ S("-- 仅执行检查","A的控制者不会被这条语句改变。",
+   [["控制权是否改变","没有"]])
+ ],
+ question:"IsControler(1-tp)会把卡片控制权交给对方吗？",
+ options:["会","不会，只判断当前控制者","只在返回true时转移"],
+ correct:1,
+ explanation:"Is开头的这个方法用于判断，不是转移控制权的操作。",
+ prompt:"填写检查卡片c是否由对方控制的表达式。",
+ template:"return ____",
+ answer:"c:IsControler(1-tp)",
+ hint:"注意方法拼写为IsControler，参数为1-tp。"
+},
+
+/* 56 */
+{
+ id:"chkc-after-methods",
+ title:"chkc：检查指定的一张卡",
+ goal:"已经认识所有单卡方法，再学习特殊检查分支。",
+ text:`
+ <p>target回调除了chk，还可以接收后面的<code>chkc</code>。</p>
+ <p>当引擎或相关机制进行单卡目标合法性查询时，
+ chkc代表“现在询问的这一张卡”。</p>
+ <p>有chkc时，本分支回答：这张指定卡是否满足本卡要求。
+ 不重新选卡，也不执行破坏。</p>
+ <p>本例检查三件已经学过的事：在怪兽区、由对方控制、符合表侧filter。</p>
+ <p>没有chkc时，继续走chk检查或正式选择流程。
+ 这个分支不代替引擎的全部目标合法性规则。</p>`,
+ example:`if chkc then
+    return chkc:IsLocation(LOCATION_MZONE)
+        and chkc:IsControler(1-tp)
+        and s.filter(chkc)
+end`,
+ takeaway:"chkc存在时，检查指定卡；不是再弹出一次选择。",
+ steps:[
+ S("-- 查询指定卡A是否适合","A在对方怪兽区且表侧。",
+   [["chkc","A"],["本课三个条件","均满足"],["返回","true"]]),
+ S("-- 查询指定卡B是否适合","B在自己的怪兽区，控制者条件不符。",
+   [["chkc","B"],["返回","false"]]),
+ S("-- 本次没有传入chkc","不执行这个分支，继续后面的target逻辑。",
+   [["接下来","判断chk并走对应流程"]])
+ ],
+ question:"chkc存在时，应当做什么？",
+ options:["检查这张指定卡","再让玩家选一次对象","立即破坏这张卡"],
+ correct:0,
+ explanation:"这里回答指定卡是否符合本卡要求，不选择或处理。",
+ prompt:"让已有filter检查指定卡，填写传入的卡片。",
+ template:"if chkc then\n    -- 其他检查已提供\n    return s.filter(____)\nend",
+ answer:"chkc",
+ hint:"此时待检查的卡就是参数chkc。"
+},
+
+/* 57 */
+{
+ id:"target-three-branches",
+ title:"把target的三条路径分开",
+ goal:"一次只走一种路径，不让检查继续执行选择。",
+ text:`
+ <p>现在可以把target看成三条路径：</p>
+ <p>① 有chkc：检查指定的一张卡，然后return。<br>
+ ② 没有chkc且chk==0：检查是否存在合法对象，然后return。<br>
+ ③ 正式选择阶段：显示提示，选择对象，登记处理信息。</p>
+ <p>前两条路径都不实际选卡。
+ return负责返回结果并结束本次函数调用。</p>
+ <p>并不是一次调用把三条路径从头到尾都执行一遍。</p>`,
+ example:targetCode,
+ takeaway:"单卡检查、存在性检查、正式选择是三种用途，不是三个必经动作。",
+ steps:[
+ S("-- chkc存在","走单卡检查并返回。",
+   [["执行","位置、控制者、filter检查"],["是否选卡","否"]]),
+ S("-- chkc不存在，chk==0","走存在性检查并返回。",
+   [["执行","IsExistingTarget"],["是否选卡","否"]]),
+ S("-- 正式选择阶段","这次才显示提示、选择、登记信息。",
+   [["执行","Hint → SelectTarget → SetOperationInfo"]])
+ ],
+ question:"chk==0检查通过后，是否应继续向下执行SelectTarget？",
+ options:["应该，每次检查都要重新选择","不应该，return已经结束本次检查调用","只有候选有两张时应该"],
+ correct:1,
+ explanation:"检查阶段不能因为通过就顺便选择；正式选择由对应阶段执行。",
+ prompt:"填入结束检查调用、返回布尔结果的Lua关键字。",
+ template:"if chk==0 then\n    ____ Duel.IsExistingTarget(s.filter,tp,0,LOCATION_MZONE,1,nil)\nend",
+ answer:"return",
+ hint:"这个关键字不仅给出返回值，也会结束本次函数调用。"
+},
+
+/* 58 */
+{
+ id:"final-guided-template",
+ title:"最后组合完整脚本",
+ goal:"不增加新函数，只连接已经分别练过的部分。",
+ text:`
+ <p>这次完整脚本只使用前面已经介绍过的API。</p>
+ <p>initial_effect：配置类别、类型、属性、事件和回调。</p>
+ <p>filter：判断候选卡是否表侧。</p>
+ <p>target：处理单卡查询、存在性检查、正式选择和处理信息。</p>
+ <p>operation：取得原对象、检查关联、请求破坏。</p>
+ <p>本次只补四处空缺，不要求突然默写整段长参数。</p>
+ <p>完整卡文仍是：以对方场上1只表侧表示怪兽为对象才能发动；那只怪兽破坏。</p>`,
+ example:`初始化：配置并注册效果
+筛选：判断表侧
+发动：检查并选择对象
+处理：检查原对象关联，然后尝试破坏`,
+ takeaway:"先能说明各部分的职责，再通过练习逐渐熟悉参数。",
+ steps:[
+ S("-- 初始化完成","没有选择卡，也没有执行破坏。",
+   [["本次对象","尚未选定"]]),
+ S("-- 合法发动，选择A","登记A为对象及预计破坏信息。",
+   [["本次对象","A"],["A是否已破坏","否"]]),
+ S("-- 之后处理","以实际状态检查原对象关联。",
+   [["关联有效","尝试破坏"],["关联断开","不改选，不继续处理原对象"]])
+ ],
+ question:"完整脚本中，哪个部分负责实际请求破坏？",
+ options:["SetCategory","operation中的Duel.Destroy","Hint"],
+ correct:1,
+ explanation:"分类和提示都不是实际破坏调用。",
+ prompt:"补全四处空缺。其余内容直接保留，之后可对照参考答案逐行解释。",
+ template:"受限骨架检查。此处不执行任意Lua，不代表通过实际引擎测试。",
+ full:true,
+ starter:`local s,id=GetID()
+
+function s.initial_effect(c)
+    local e1=Effect.CreateEffect(c)
+    e1:SetCategory(CATEGORY_DESTROY)
+    e1:SetType(EFFECT_TYPE_ACTIVATE)
+    e1:SetProperty(____)
+    e1:SetCode(EVENT_FREE_CHAIN)
+    e1:SetTarget(s.target)
+    e1:SetOperation(s.operation)
+    c:RegisterEffect(e1)
+end
+
+function s.filter(c)
+    return ____
+end
+
+function s.target(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
+    if chkc then
+        return chkc:IsLocation(LOCATION_MZONE)
+            and chkc:IsControler(1-tp)
+            and s.filter(chkc)
+    end
+    if chk==0 then
+        return Duel.IsExistingTarget(s.filter,tp,0,LOCATION_MZONE,1,nil)
+    end
+    Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_DESTROY)
+    local g=Duel.SelectTarget(tp,s.filter,tp,0,LOCATION_MZONE,1,1,nil)
+    Duel.SetOperationInfo(0,CATEGORY_DESTROY,g,1,0,0)
+end
+
+function s.operation(e,tp,eg,ep,ev,re,r,rp)
+    local tc=Duel.GetFirstTarget()
+    if tc and ____ then
+        ____
+    end
+end`,
+ answer:completeScript,
+ hint:"四处依次是取对象属性、表侧判断、关联检查、实际破坏调用。"
+}
+
+ ]
+};
+
+/* ==================================================
+ B. 通用界面与学习记录
+ ================================================== */
+const $=id=>document.getElementById(id);
+const lessons=STAGE.lessons;
+const esc=v=>String(v).replace(/[&<>"']/g,c=>({
+ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+})[c]);
+function box(title,fields){
+ return `<div class="object"><b>${esc(title)}</b><div class="fields">${
+  fields.map(([k,v])=>`<span>${esc(k)}</span><span>${esc(v)}</span>`).join("")
+ }</div></div>`;
+}
+const KEY="ygo-learning:"+STAGE.id+":v1";
+function emptyState(){
+ return {schemaVersion:1,stageId:STAGE.id,currentLessonId:lessons[0].id,records:{}};
+}
+function sanitize(raw){
+ if(!raw||raw.schemaVersion!==1||raw.stageId!==STAGE.id)
+  throw new Error("不是本阶段兼容的学习记录。");
+ const clean=emptyState();
+ if(lessons.some(l=>l.id===raw.currentLessonId))clean.currentLessonId=raw.currentLessonId;
+ for(const l of lessons){
+  const r=raw.records?.[l.id];
+  if(!r||typeof r!=="object")continue;
+  clean.records[l.id]={
+   step:Number.isInteger(r.step)&&r.step>=0&&r.step<l.steps.length?r.step:0,
+   observed:r.observed===true,quiz:r.quiz===true,exercise:r.exercise===true,
+   draft:typeof r.draft==="string"?r.draft.slice(0,60000):null
+  };
+ }
+ return clean;
+}
+let state=emptyState();
+try{
+ const raw=localStorage.getItem(KEY);
+ if(raw)state=sanitize(JSON.parse(raw));
+}catch{$("storageNotice").textContent="无法读取旧记录，已开启本次学习。";}
+const index=()=>lessons.findIndex(l=>l.id===state.currentLessonId);
+const lesson=()=>lessons[index()];
+function record(id=state.currentLessonId){
+ return state.records[id]||(state.records[id]={
+  step:0,observed:false,quiz:false,exercise:false,draft:null
+ });
+}
+function save(){
+ try{localStorage.setItem(KEY,JSON.stringify(state));}
+ catch{$("storageNotice").textContent="浏览器无法保存，可导出记录备份。";}
+}
+function complete(id){
+ const r=record(id);return r.observed&&r.quiz&&r.exercise;
+}
+function refresh(){
+ $("nav").replaceChildren();
+ lessons.forEach((l,i)=>{
+  const b=document.createElement("button");
+  b.className=l.id===state.currentLessonId?"active":"";
+  if(b.className)b.setAttribute("aria-current","step");
+  b.innerHTML=`<span class="num">${STAGE.startNumber+i}</span>
+   <span>${esc(l.title)}</span><span class="tick">${complete(l.id)?"✓":""}</span>`;
+  b.onclick=()=>open(l.id);$("nav").appendChild(b);
+ });
+ const n=lessons.filter(l=>complete(l.id)).length;
+ $("progressText").textContent=`${n} / ${lessons.length}`;
+ $("progressBar").style.width=n/lessons.length*100+"%";
+ const r=record();
+ $("checklist").innerHTML=[
+  [r.observed,"看完全部观察步骤"],[r.quiz,"答对理解题"],[r.exercise,"完成本课小练习"]
+ ].map(([ok,t])=>`<div class="${ok?"goodText":"muted"}">${ok?"✓":"○"} ${t}</div>`).join("");
+ $("lessonStatus").textContent=complete(state.currentLessonId)?"✓ 本课已完成":"按自己的节奏慢慢来";
+}
+function renderStep(){
+ const l=lesson(),r=record(),s=l.steps[r.step];
+ $("visual").innerHTML=`<div class="visualTitle">教学场景 · 第${r.step+1}步</div>`+box("当前状态",s.fields);
+ $("stepCode").textContent=s.code;
+ $("stepCaption").textContent=s.caption;
+ $("stepCount").textContent=`观察进度：${r.step+1} / ${l.steps.length}`;
+ $("previousStep").disabled=r.step===0;
+ $("nextStep").disabled=r.step===l.steps.length-1;
+ $("nextStep").textContent=r.step===l.steps.length-1?"观察完毕 ✓":"观察下一步 →";
+ if(r.step===l.steps.length-1)r.observed=true;
+ save();refresh();
+}
+function renderQuiz(){
+ const l=lesson(),r=record();
+ $("question").textContent=l.question;$("options").replaceChildren();
+ l.options.forEach((t,i)=>{
+  const b=document.createElement("button");
+  b.className="option"+(r.quiz&&i===l.correct?" good":"");
+  b.textContent=String.fromCharCode(65+i)+". "+t;
+  b.onclick=()=>{
+   document.querySelectorAll("#options button").forEach(x=>x.classList.remove("good","bad"));
+   const ok=i===l.correct;b.classList.add(ok?"good":"bad");
+   $("quizFeedback").className="feedback "+(ok?"goodText":"badText");
+   $("quizFeedback").textContent=ok?"正确！"+l.explanation:"还不对，回看知识点后可以继续选择。";
+   if(ok){r.quiz=true;save();refresh();}
+  };
+  $("options").appendChild(b);
+ });
+ $("quizFeedback").className="feedback"+(r.quiz?" goodText":"");
+ $("quizFeedback").textContent=r.quiz?"✓ 已答对。"+l.explanation:"";
+}
+function open(id){
+ if(!lessons.some(l=>l.id===id))return;
+ state.currentLessonId=id;
+ const l=lesson(),r=record();
+ $("lessonTag").textContent=`第五阶段 · 第${STAGE.startNumber+index()}课`;
+ $("lessonTitle").textContent=l.title;$("lessonGoal").textContent=l.goal;
+ $("lessonText").innerHTML=l.text;$("example").textContent=l.example;
+ $("takeaway").textContent="记住这一句："+l.takeaway;
+ $("exercisePrompt").textContent=l.prompt;$("exerciseTemplate").textContent=l.template;
+ $("exerciseHint").textContent=l.hint;$("exerciseSolution").textContent=l.answer;
+ $("answerInput").hidden=!!l.full;$("codeInput").hidden=!l.full;
+ $("inputLabel").htmlFor=l.full?"codeInput":"answerInput";
+ $("inputLabel").textContent=l.full?"补全下面的代码":"在下方填写空缺部分";
+ (l.full?$("codeInput"):$("answerInput")).value=typeof r.draft==="string"?r.draft:(l.starter||"");
+ $("exerciseFeedback").className="feedback"+(r.exercise?" goodText":"");
+ $("exerciseFeedback").textContent=r.exercise?"✓ 已通过，可以再次复习。":"";
+ $("hintDetails").open=false;$("solutionDetails").open=false;
+ $("previousLesson").disabled=index()===0;
+ $("nextLesson").disabled=index()===lessons.length-1;
+ $("nextLesson").textContent=index()===lessons.length-1?"本阶段最后一课":"下一课 →";
+ renderQuiz();renderStep();save();
+}
+$("previousStep").onclick=()=>{if(record().step>0){record().step--;renderStep();}};
+$("nextStep").onclick=()=>{
+ if(record().step<lesson().steps.length-1){record().step++;renderStep();}
+};
+$("previousLesson").onclick=()=>{
+ if(index()>0)open(lessons[index()-1].id);
+ window.scrollTo({top:0,behavior:"smooth"});
+};
+$("nextLesson").onclick=()=>{
+ if(index()<lessons.length-1)open(lessons[index()+1].id);
+ window.scrollTo({top:0,behavior:"smooth"});
+};
+const norm=s=>s.trim().replace(/\s+/g,"").replace(/;+$/,"");
+const lines=s=>s.split(/\r?\n/).map(x=>x.replace(/--.*$/,"").trim()).filter(Boolean).map(norm);
+function check(){
+ const l=lesson(),r=record(),value=(l.full?$("codeInput"):$("answerInput")).value;
+ r.draft=value;let ok=false,msg="";
+ if(l.full){
+  const a=lines(value),b=lines(l.answer),i=b.findIndex((v,j)=>v!==a[j]);
+  ok=i===-1&&a.length===b.length;
+  msg=i!==-1?`有效代码第${i+1}行还需调整，请检查占位符和参数。`:"存在额外代码，本题只检查给定骨架。";
+ }else ok=norm(value)===norm(l.answer);
+ $("exerciseFeedback").className="feedback "+(ok?"goodText":"badText");
+ $("exerciseFeedback").textContent=ok?
+  (l.full?"✓ 骨架正确！这不是实际引擎执行结果。":"✓ 正确！再想想这行在发动还是处理时执行。"):
+  (msg||"暂时不匹配。检查大小写、点号、冒号，只填写要求的部分。");
+ if(ok)r.exercise=true;save();refresh();
+}
+$("checkAnswer").onclick=check;
+$("resetAnswer").onclick=()=>{
+ const l=lesson(),input=l.full?$("codeInput"):$("answerInput");
+ input.value=l.starter||"";record().draft=input.value;save();
+ $("exerciseFeedback").className="feedback muted";
+ $("exerciseFeedback").textContent="输入已重置，已有通过记录保留。";
+};
+["answerInput","codeInput"].forEach(id=>{
+ $(id).addEventListener("input",e=>{record().draft=e.target.value;save();});
+});
+$("answerInput").addEventListener("keydown",e=>{if(e.key==="Enter")check();});
+$("codeInput").addEventListener("keydown",e=>{
+ if(e.key==="Tab"){
+  e.preventDefault();
+  e.target.setRangeText("    ",e.target.selectionStart,e.target.selectionEnd,"end");
+  e.target.dispatchEvent(new Event("input"));
+ }
+ if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){e.preventDefault();check();}
+});
+$("exportProgress").onclick=()=>{
+ save();
+ const url=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:"application/json"}));
+ const a=document.createElement("a");
+ a.href=url;a.download="ygo-stage05-progress.json";
+ document.body.appendChild(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),1000);
+ $("storageNotice").textContent="已请求下载本阶段记录。";
+};
+$("importProgress").onclick=()=>$("importFile").click();
+$("importFile").addEventListener("change",async e=>{
+ const file=e.target.files[0];if(!file)return;
+ try{
+  if(file.size>1024*1024)throw new Error("文件过大。");
+  const imported=sanitize(JSON.parse(await file.text()));
+  if(!confirm("替换当前第五阶段记录？建议先导出备份。"))return;
+  state=imported;save();open(state.currentLessonId);
+  $("storageNotice").textContent="已导入学习记录。";
+ }catch(err){$("storageNotice").textContent="导入失败："+err.message;}
+ finally{e.target.value="";}
+});
+$("clearProgress").onclick=()=>{
+ if(!confirm("清空第五阶段进度与草稿？其他阶段不受影响。"))return;
+ state=emptyState();save();open(state.currentLessonId);
+};
+
+/* ==================================================
+ C. 固定规则实验台：未来可拆到 labs/targeting.js
+ ================================================== */
+let lab;
+const tp=()=>Number($("labPlayer").value);
+function target(){return lab.cards.find(c=>c.id===lab.targetId);}
+function legal(c){return c.side!==tp()&&c.location==="MZONE"&&c.faceup;}
+function log(s){lab.log.push(s);if(lab.log.length>100)lab.log.shift();}
+function resetLab(){
+ lab={
+  phase:"new",targetId:null,draftId:null,
+  cards:[
+   {id:"A",side:0,faceup:true,location:"MZONE",related:true},
+   {id:"B",side:1,faceup:true,location:"MZONE",related:true},
+   {id:"C",side:1,faceup:false,location:"MZONE",related:true}
+  ],
+  log:["新场景：A归玩家0，B与C归玩家1。候选卡无抗性、免疫或其他取对象限制。"]
+ };
+ $("labNegated").checked=false;renderLab();
+}
+function renderLab(){
+ $("phase").innerHTML=[
+  ["new","未初始化"],["ready","准备发动"],["chain","对象已选择"],["done","处理结束"]
+ ].map(([p,t])=>`<span class="${lab.phase===p?"active":""}">${t}</span>`).join("");
+
+ $("labCards").replaceChildren();
+ lab.cards.forEach(c=>{
+  const div=document.createElement("div");
+  div.className="labCard"+(lab.targetId===c.id?" selected":"");
+  const title=document.createElement("h3");
+  title.textContent="怪兽"+c.id+" · 玩家"+c.side;
+  div.appendChild(title);
+  const info=document.createElement("p");
+  info.textContent=`位置：${c.location==="MZONE"?"怪兽区":"墓地"}；${c.faceup?"表侧":"里侧"}`;
+  div.appendChild(info);
+
+  const label=document.createElement("label"),cb=document.createElement("input");
+  cb.type="checkbox";cb.checked=c.faceup;
+  cb.disabled=lab.phase!=="new"&&lab.phase!=="ready";
+  cb.onchange=()=>{
+   c.faceup=cb.checked;
+   if(lab.draftId===c.id&&!legal(c))lab.draftId=null;
+   renderLab();
+  };
+  label.append(cb,document.createTextNode(" 表侧（发动前可调整）"));
+  div.appendChild(label);
+
+  const pick=document.createElement("button");
+  pick.textContent=lab.draftId===c.id?"已预选 ✓":"预选此卡";
+  pick.disabled=lab.phase!=="ready"||!legal(c);
+  pick.onclick=()=>{
+   lab.draftId=c.id;
+   log(`界面预选${c.id}：尚未正式发动。点击“选择对象并发动”才登记对象。`);
+   renderLab();
+  };
+  div.appendChild(pick);
+  const note=document.createElement("p");note.className="small muted";
+  note.textContent=lab.phase==="new"||lab.phase==="ready"?
+   (legal(c)?"符合本场景对象条件。":"不符合本场景对象条件。"):
+   (lab.targetId===c.id?`原对象；关联：${c.related?"仍在":"已断开"}`:"不是本次对象。");
+  div.appendChild(note);$("labCards").appendChild(div);
+ });
+
+ const tc=target();
+ $("targetStatus").innerHTML=box("本次发动",[
+  ["发动玩家",tp()],
+  ["界面预选",lab.draftId||"无"],
+  ["正式登记对象",lab.targetId||"未登记"],
+  ["原对象关联",tc?(tc.related?"仍关联":"已断开"):"尚无对象"]
+ ]);
+ $("initialize").disabled=lab.phase!=="new";
+ $("inspect").disabled=lab.phase!=="ready";
+ $("activate").disabled=lab.phase!=="ready";
+ $("resolve").disabled=lab.phase!=="chain";
+ $("setFacedown").disabled=lab.phase!=="chain"||!tc||tc.location!=="MZONE"||!tc.faceup;
+ $("leaveField").disabled=lab.phase!=="chain"||!tc||tc.location!=="MZONE";
+ $("leaveReturn").disabled=lab.phase!=="chain"||!tc||tc.location!=="MZONE";
+ $("labLog").textContent=lab.log.join("\n");
+ $("labLog").scrollTop=$("labLog").scrollHeight;
+}
+$("initialize").onclick=()=>{
+ if(lab.phase!=="new")return;
+ lab.phase="ready";
+ log("① 初始化：登记破坏类别、取对象属性和target/operation回调。没有选择或破坏卡片。");
+ renderLab();
+};
+$("inspect").onclick=()=>{
+ if(lab.phase!=="ready")return;
+ const list=lab.cards.filter(legal);
+ log(`② IsExistingTarget检查：${list.length?"true":"false"}。候选：${list.map(c=>c.id).join("、")||"无"}。`);
+ log("检查不登记对象。");
+ renderLab();
+};
+$("activate").onclick=()=>{
+ if(lab.phase!=="ready")return;
+ const list=lab.cards.filter(legal);
+ if(!list.length){log("③ 发动失败：没有合法对象。");renderLab();return;}
+ const chosen=list.find(c=>c.id===lab.draftId);
+ if(!chosen){
+  log("请先点击一张合法候选的“预选此卡”。本实验台不会自动替你选择。");
+  renderLab();return;
+ }
+ lab.targetId=chosen.id;lab.phase="chain";
+ log("③ 检查通过，显示破坏对象选择提示。");
+ log(`SelectTarget：正式登记${chosen.id}为本次对象。`);
+ log("SetOperationInfo：登记预计破坏1张。尚未执行破坏。");
+ renderLab();
+};
+$("setFacedown").onclick=()=>{
+ const tc=target();
+ if(lab.phase!=="chain"||!tc||tc.location!=="MZONE")return;
+ tc.faceup=false;
+ log("场景变化：原对象变为里侧但未离场。本教学场景仍与效果关联。");
+ renderLab();
+};
+$("leaveField").onclick=()=>{
+ const tc=target();
+ if(lab.phase!=="chain"||!tc||tc.location!=="MZONE")return;
+ tc.location="GRAVE";tc.faceup=true;tc.related=false;
+ log("场景变化：原对象离场至墓地，旧关联断开。");
+ renderLab();
+};
+$("leaveReturn").onclick=()=>{
+ const tc=target();
+ if(lab.phase!=="chain"||!tc||tc.location!=="MZONE")return;
+ tc.related=false;tc.faceup=true;
+ log("场景变化：原对象离场后返回怪兽区。虽然仍显示同一张卡，旧效果关联已断开。");
+ renderLab();
+};
+$("resolve").onclick=()=>{
+ if(lab.phase!=="chain")return;
+ const tc=target();
+ log("④ 开始处理。");
+ if($("labNegated").checked){
+  log("本场景效果被无效，不执行破坏处理。");
+ }else{
+  log(`GetFirstTarget：示意取得原对象${tc?tc.id:"无"}。`);
+  if(tc&&tc.related){
+   log("IsRelateToEffect → true。");
+   if(!tc.faceup)log("对象虽为里侧，但本课卡文不要求处理时仍表侧。");
+   log(`Destroy(${tc.id},REASON_EFFECT)：本场景无抗性或替代，破坏成功。`);
+   tc.location="GRAVE";tc.faceup=true;tc.related=false;
+  }else{
+   log("对象不存在或旧关联断开，不执行破坏，也不改选其他卡。");
+  }
+ }
+ lab.phase="done";renderLab();
+};
+$("labNegated").onchange=()=>{
+ log("场景设置：处理时效果"+($("labNegated").checked?"被无效。":"不被无效。"));
+ renderLab();
+};
+$("labPlayer").onchange=resetLab;
+$("resetLab").onclick=resetLab;
+
+/* 字典 */
+const terms=[
+ ["SetProperty","配置效果属性标记，不等于设置类别。"],
+ ["EFFECT_FLAG_CARD_TARGET","声明本效果取对象，不会自动选择卡。"],
+ ["IsExistingTarget","检查指定范围中是否存在足够数量的合法对象。"],
+ ["SelectTarget","实际选择并登记本次效果对象，返回所选卡的Group。"],
+ ["HINT_SELECTMSG / HINTMSG_DESTROY","分别表示选择提示类型与破坏选择提示内容。"],
+ ["chkc","当收到单卡目标合法性查询时，表示那张待检查卡。"],
+ ["IsControler","检查卡片当前由指定玩家控制。API拼写只有一个l。"],
+ ["GetFirstTarget","取得本次第一个对象。本课只选一张，不用于代替多对象处理。"],
+ ["IsRelateToEffect","检查卡片与指定效果的关联，不等于重新执行所有filter条件。"],
+ ["Destroy","请求引擎破坏卡片；实际结果受规则及其他效果影响。"],
+ ["CATEGORY_DESTROY","破坏处理类别，不执行破坏。"]
+];
+$("glossary").innerHTML=terms.map(([n,t])=>
+ `<div style="margin-top:14px"><strong style="color:var(--blue)">${esc(n)}</strong>
+ <div class="muted">${esc(t)}</div></div>`
+).join("");
+
+open(state.currentLessonId);
+resetLab();
+</script>
+<script src="progress-sync.js"></script>
+</body>
+</html>

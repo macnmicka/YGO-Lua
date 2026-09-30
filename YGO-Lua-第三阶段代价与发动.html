@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>YGO Lua · 第三阶段：代价与发动</title>
+<style>
+:root{
+  --bg:#0a1020;--panel:#131e33;--panel2:#18263f;
+  --line:#2a3c5d;--text:#e6eeff;--muted:#a8b9d5;
+  --blue:#86a5ff;--green:#69e2b2;--yellow:#ffd782;--red:#ff9aa8;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:radial-gradient(ellipse at top right,#172750,transparent 50%),var(--bg);
+  color:var(--text);
+  font:15px/1.8 system-ui,"Microsoft YaHei",sans-serif;
+}
+button,input,textarea,select{font:inherit}
+button{
+  cursor:pointer;padding:9px 14px;
+  border:1px solid var(--line);border-radius:9px;
+  background:var(--panel2);color:var(--text);
+}
+button:hover{border-color:var(--blue)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{
+  outline:2px solid var(--blue);outline-offset:3px;
+}
+.primary{background:#486aca;border-color:#6485e6;color:white}
+.shell{display:grid;grid-template-columns:255px minmax(0,1fr);min-height:100vh}
+aside{
+  position:sticky;top:0;height:100vh;overflow:auto;
+  padding:22px 16px;border-right:1px solid var(--line);background:#0c1425;
+}
+.brand{font-size:21px;font-weight:800}
+.subtitle{color:var(--muted);font-size:12px}
+.progressBox{
+  margin:20px 0;padding:13px;background:var(--panel);
+  border:1px solid var(--line);border-radius:12px;
+}
+.progressTitle{display:flex;justify-content:space-between;font-size:13px}
+.progressTrack{
+  height:7px;background:#080d18;border-radius:10px;margin-top:10px;overflow:hidden;
+}
+.progressTrack div{
+  height:100%;background:linear-gradient(90deg,var(--blue),var(--green));
+  transition:width .3s;
+}
+nav{display:grid;gap:7px}
+nav button{
+  display:flex;align-items:center;gap:9px;text-align:left;
+  padding:10px;background:transparent;border-color:transparent;font-size:13px;
+}
+nav button.active{background:#22375e;border-color:#5d7fcc}
+nav .num{color:var(--muted);min-width:21px}
+nav .tick{margin-left:auto;color:var(--green)}
+main{min-width:0;width:100%;max-width:1400px;margin:0 auto;padding:30px}
+.hero{
+  padding:24px;border:1px solid var(--line);border-radius:17px;
+  background:linear-gradient(120deg,#1d3053,#132139);margin-bottom:20px;
+}
+.tag{color:var(--green);font-size:12px;font-weight:700;letter-spacing:.08em}
+h1{margin:8px 0;font-size:29px;line-height:1.4}
+h2{font-size:18px;margin:0 0 14px}
+h3{font-size:15px;margin:16px 0 8px}
+p{margin:9px 0}
+.muted{color:var(--muted)}
+.grid{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:20px;align-items:start;
+}
+.panel{
+  padding:20px;border:1px solid var(--line);background:var(--panel);
+  border-radius:14px;margin-bottom:20px;min-width:0;
+}
+.lessonText{color:#d0def5}
+.lessonText strong{color:white}
+code{
+  color:#a5edcf;background:#0b1526;padding:2px 5px;
+  border-radius:5px;font-family:Consolas,monospace;
+}
+pre{
+  background:#080f1d;color:#d6e5ff;border:1px solid #263958;
+  padding:15px;border-radius:10px;white-space:pre-wrap;
+  overflow-wrap:anywhere;font:14px/1.8 Consolas,monospace;
+}
+.note{
+  padding:12px 14px;border-left:3px solid var(--blue);
+  border-radius:0 8px 8px 0;background:#182943;
+  color:#c5d6f2;font-size:13px;margin:15px 0;
+}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+.visual{
+  min-height:170px;padding:18px;background:#0b1424;
+  border:1px dashed #395277;border-radius:12px;
+}
+.visualTitle{font-weight:700;color:var(--yellow);margin-bottom:12px}
+.object{
+  padding:13px;background:#182943;border:1px solid #3c567e;
+  border-radius:10px;margin-bottom:10px;
+}
+.object b{display:block;color:var(--blue);margin-bottom:5px}
+.fields{display:grid;grid-template-columns:auto 1fr;gap:5px 15px;font-size:13px}
+.fields span:nth-child(odd){color:var(--muted)}
+.stepCount{font-size:12px;color:var(--muted)}
+.caption{padding:12px 0 0;min-height:62px;color:#c8d9f7;font-size:14px}
+.option{width:100%;text-align:left;display:block;margin-top:9px}
+.option.good{border-color:var(--green);background:#173d34}
+.option.bad{border-color:var(--red);background:#412b3b}
+.feedback{min-height:30px;padding-top:12px;font-size:14px}
+.goodText{color:var(--green)}
+.badText{color:var(--red)}
+textarea,input[type=text],select{
+  padding:12px;color:#e6efff;background:#090f1d;
+  border:1px solid #3a5276;border-radius:9px;
+}
+textarea,input[type=text]{width:100%;font:14px/1.8 Consolas,monospace}
+textarea{min-height:380px;resize:vertical;tab-size:4}
+[hidden]{display:none!important}
+details{margin-top:13px}
+summary{cursor:pointer;color:var(--blue)}
+.footerNav{
+  display:flex;justify-content:space-between;align-items:center;
+  gap:14px;margin-bottom:25px;
+}
+.badge{color:var(--green);font-size:13px}
+.small{font-size:12px}
+.settings{display:flex;gap:15px;flex-wrap:wrap;align-items:center}
+.players{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:15px 0}
+.phase{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.phase span{
+  padding:5px 10px;border:1px solid var(--line);border-radius:8px;font-size:12px;
+}
+.phase .active{border-color:var(--green);color:var(--green)}
+#labLog{max-height:340px;overflow:auto}
+#storageNotice{font-size:12px;color:var(--yellow)}
+@media(max-width:1100px){.grid{grid-template-columns:1fr}}
+@media(max-width:700px){
+  .shell{display:block}
+  aside{position:static;height:auto;padding:14px}
+  nav{display:flex;overflow:auto}
+  nav button{min-width:185px}
+  .progressBox{margin:12px 0}
+  main{padding:15px}
+  h1{font-size:24px}
+  .hero,.panel{padding:17px}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside>
+  <div class="brand">✦ YGO Lua 学习室</div>
+  <div class="subtitle">先看懂，再动手，最后独立写卡</div>
+
+  <div class="progressBox">
+    <div class="progressTitle">
+      <span>第三阶段 · 代价篇</span>
+      <strong id="progressText"></strong>
+    </div>
+    <div class="progressTrack"><div id="progressBar"></div></div>
+  </div>
+
+  <nav id="nav" aria-label="课程目录"></nav>
+
+  <details>
+    <summary>学习记录</summary>
+    <p class="small muted">本阶段单独保存，不影响前两阶段。</p>
+    <button id="clearProgress">清空本阶段记录</button>
+  </details>
+  <p id="storageNotice"></p>
+</aside>
+
+<main>
+  <header class="hero">
+    <div class="tag" id="lessonTag"></div>
+    <h1 id="lessonTitle"></h1>
+    <div class="muted" id="lessonGoal"></div>
+  </header>
+
+  <div class="grid">
+    <div>
+      <section class="panel">
+        <h2>① 先理解一个小知识点</h2>
+        <div id="lessonText" class="lessonText"></div>
+        <pre id="example"></pre>
+        <div class="note" id="takeaway"></div>
+      </section>
+
+      <section class="panel">
+        <h2>② 点击观察</h2>
+        <p class="small muted">预设教学演示，不执行任意 Lua。</p>
+        <div class="visual" id="visual"></div>
+        <pre id="stepCode"></pre>
+        <div class="caption" id="stepCaption" aria-live="polite"></div>
+        <div class="actions">
+          <button id="previousStep">← 上一步</button>
+          <button id="nextStep" class="primary">观察下一步 →</button>
+        </div>
+        <div class="stepCount" id="stepCount"></div>
+      </section>
+    </div>
+
+    <div>
+      <section class="panel">
+        <h2>③ 确认你理解了</h2>
+        <p id="question"></p>
+        <div id="options"></div>
+        <div class="feedback" id="quizFeedback" aria-live="polite"></div>
+      </section>
+
+      <section class="panel">
+        <h2>④ 只写一点点</h2>
+        <p id="exercisePrompt"></p>
+        <pre id="exerciseTemplate"></pre>
+        <label for="answerInput" class="small muted" id="inputLabel">
+          填写空缺部分
+        </label>
+        <input id="answerInput" type="text" autocomplete="off" spellcheck="false">
+        <textarea id="codeInput" spellcheck="false" hidden
+          aria-label="代码骨架练习"></textarea>
+
+        <div class="actions">
+          <button class="primary" id="checkAnswer">检查练习</button>
+          <button id="resetAnswer">重新填写</button>
+        </div>
+        <div class="feedback" id="exerciseFeedback" aria-live="polite"></div>
+
+        <details id="hintDetails">
+          <summary>给我一个提示</summary><p id="exerciseHint"></p>
+        </details>
+        <details id="solutionDetails">
+          <summary>查看参考答案</summary><pre id="exerciseSolution"></pre>
+          <p class="small muted">查看答案不会自动完成练习。</p>
+        </details>
+      </section>
+
+      <section class="panel">
+        <h2>本课完成条件</h2>
+        <div id="checklist"></div>
+        <p class="small muted">不用一次答对，理解后再继续。</p>
+      </section>
+    </div>
+  </div>
+
+  <div class="footerNav">
+    <button id="previousLesson">← 上一课</button>
+    <span class="badge" id="lessonStatus"></span>
+    <button id="nextLesson" class="primary">下一课 →</button>
+  </div>
+
+  <section class="panel">
+    <h2>⑤ LP 代价实验台</h2>
+    <p>教学卡效果：支付800 LP；自己抽1张卡。</p>
+    <div class="note">
+      这里运行固定教学规则，不读取上方输入的代码。
+      模拟普通LP代价，不实现代价替代、完整连锁响应或其他卡片干涉。
+      卡片本身的发动移动不计入手牌变化，手牌数字只用于观察抽卡。
+    </div>
+
+    <div class="settings">
+      <label>发动玩家
+        <select id="player">
+          <option value="0">玩家0</option>
+          <option value="1">玩家1</option>
+        </select>
+      </label>
+
+      <label>发动玩家初始LP
+        <select id="initialLP">
+          <option value="8000">8000</option>
+          <option value="1000">1000</option>
+          <option value="799">799</option>
+        </select>
+      </label>
+
+      <label><input id="cannotDraw" type="checkbox">禁止发动玩家抽卡</label>
+      <label><input id="negated" type="checkbox">处理时效果被无效</label>
+    </div>
+
+    <p class="small muted">
+      切换玩家或初始LP会重置流程。勾选项可在发动后改变。
+      为避免引入胜负规则，本实验台不提供“支付后LP变成0”的流程。
+    </p>
+
+    <div id="phase" class="phase"></div>
+    <div id="players" class="players"></div>
+    <div id="engineState"></div>
+
+    <div class="actions">
+      <button id="initialize">1. 初始化</button>
+      <button id="inspect">2. 仅检查</button>
+      <button id="activate">3. 发动并支付</button>
+      <button id="resolve" class="primary">4. 处理</button>
+      <button id="resetLab">重置场景</button>
+    </div>
+    <pre id="labLog" aria-live="polite"></pre>
+
+    <details>
+      <summary>建议完成的四个实验</summary>
+      <ol>
+        <li>连续检查三次，确认LP没有减少。</li>
+        <li>初始LP设为799，确认无法发动。</li>
+        <li>8000 LP、禁止抽卡，确认不会因为“能支付”就扣LP发动。</li>
+        <li>成功发动并支付后，使效果被无效，确认800 LP不退还。</li>
+      </ol>
+    </details>
+  </section>
+
+  <section class="panel">
+    <details>
+      <summary>随时可查：本阶段术语小字典</summary>
+      <div id="glossary"></div>
+    </details>
+  </section>
+
+  <p class="small muted">
+    本课程采用现代 EDOPro 常见脚本风格。最终示例需配套普通魔法卡数据库记录，
+    放入客户端配置的 script 搜索路径，并在实际引擎中验证。
+  </p>
+</main>
+</div>
+
+<script>
+"use strict";
+
+const $=id=>document.getElementById(id);
+
+function esc(value){
+  return String(value).replace(/[&<>"']/g,c=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  })[c]);
+}
+
+function box(title,fields){
+  return `<div class="object">
+    <b>${esc(title)}</b>
+    <div class="fields">${
+      fields.map(([k,v])=>
+        `<span>${esc(k)}</span><span>${esc(v)}</span>`
+      ).join("")
+    }</div>
+  </div>`;
+}
+
+function step(code,caption,fields){
+  return {code,caption,fields};
+}
+
+const costFunction=`function s.cost(e,tp,eg,ep,ev,re,r,rp,chk)
+    if chk==0 then
+        return Duel.CheckLPCost(tp,800)
+    end
+    Duel.PayLPCost(tp,800)
+end`;
+
+const completeScript=`local s,id=GetID()
+
+function s.initial_effect(c)
+    local e1=Effect.CreateEffect(c)
+    e1:SetCategory(CATEGORY_DRAW)
+    e1:SetType(EFFECT_TYPE_ACTIVATE)
+    e1:SetCode(EVENT_FREE_CHAIN)
+    e1:SetCost(s.cost)
+    e1:SetTarget(s.target)
+    e1:SetOperation(s.operation)
+    c:RegisterEffect(e1)
+end
+
+function s.cost(e,tp,eg,ep,ev,re,r,rp,chk)
+    if chk==0 then
+        return Duel.CheckLPCost(tp,800)
+    end
+    Duel.PayLPCost(tp,800)
+end
+
+function s.target(e,tp,eg,ep,ev,re,r,rp,chk)
+    if chk==0 then
+        return Duel.IsPlayerCanDraw(tp,1)
+    end
+    Duel.SetOperationInfo(0,CATEGORY_DRAW,nil,0,tp,1)
+end
+
+function s.operation(e,tp,eg,ep,ev,re,r,rp)
+    Duel.Draw(tp,1,REASON_EFFECT)
+end`;
+
+const lessons=[
+{
+  title:"代价与效果不是一回事",
+  goal:"先理解规则上的区别，再学习对应函数。",
+  text:`
+    <p>本阶段的卡片要实现：<strong>支付800 LP；自己抽1张卡。</strong></p>
+    <p>这里把支付800 LP明确规定为<strong>发动代价</strong>。
+    它在发动手续中支付，不等待效果处理。</p>
+    <p>抽卡才是之后处理的效果。</p>
+    <p>不能只因为两者都写在同一张卡的文字里，
+    就把支付和抽卡一起放进 operation。</p>
+    <p>中文卡文的标点不能机械地代替裁定判断。
+    本课已明确给出设计要求：800 LP是代价。</p>`,
+  example:`发动手续：支付800 LP
+之后处理：自己抽1张卡
+
+不是：
+等到处理时，才决定是否支付800 LP。`,
+  takeaway:"代价在发动时支付；效果在之后处理。",
+  steps:[
+    step("-- 发动前","玩家还没支付代价。",
+      [["LP","8000"],["手牌","5张"],["状态","准备发动"]]),
+    step("-- 发动手续：支付800 LP","LP先减少，抽卡尚未发生。",
+      [["LP","7200"],["手牌","仍是5张"],["状态","等待处理"]]),
+    step("-- 正常处理：抽1张","之后才执行抽卡。",
+      [["LP","7200"],["手牌","6张"],["状态","处理结束"]])
+  ],
+  question:"本课规定800 LP是发动代价，它应该什么时候支付？",
+  options:["等抽卡成功后才支付","发动手续中支付","卡片初始化时支付"],
+  correct:1,
+  explanation:"发动代价不等到效果处理，也不能在初始化卡片时提前支付。",
+  prompt:"本课把支付代价的函数命名为 s.cost。补全函数名。",
+  template:"function s.____(e,tp,eg,ep,ev,re,r,rp,chk)\nend",
+  answer:"cost",
+  hint:"cost 是本课采用的常见命名，下一步还需要绑定给效果。"
+},
+{
+  title:"CheckLPCost：检查能否支付",
+  goal:"认识只检查、不扣LP的函数。",
+  text:`
+    <p><code>Duel.CheckLPCost(tp,800)</code>
+    询问发动玩家能否支付指定LP代价，返回布尔结果。</p>
+    <p>第一个参数是玩家；第二个参数是代价数值。</p>
+    <p>检查不会减少LP，因此可以在合法性检查中调用。</p>
+    <p>真实引擎可能存在影响LP代价的效果。
+    写卡时应使用适用的引擎检查，不把所有情况自行简化成数字比较。</p>
+    <p>本课只观察没有其他影响的普通LP代价。</p>`,
+  example:`local canpay=Duel.CheckLPCost(tp,800)
+
+-- canpay 是检查结果
+-- 执行这行本身不会扣LP`,
+  takeaway:"CheckLPCost 回答能不能支付，不执行支付。",
+  steps:[
+    step("Duel.CheckLPCost(tp,800)","8000 LP，本普通场景可以支付。",
+      [["检查前LP","8000"],["返回结果","true"],["检查后LP","8000"]]),
+    step("Duel.CheckLPCost(tp,800)","799 LP，本场景不足以支付800。",
+      [["检查前LP","799"],["返回结果","false"],["检查后LP","799"]]),
+    step("-- 重复检查三次","检查不能变成三次支付。",
+      [["初始LP","8000"],["检查次数","3"],["最终LP","8000"]])
+  ],
+  question:"CheckLPCost 返回 true 后，800 LP已经扣掉了吗？",
+  options:["已经扣掉","没有，只说明检查通过","只扣掉一半"],
+  correct:1,
+  explanation:"检查返回布尔值，实际支付使用另一个函数。",
+  prompt:"填写检查发动玩家能否支付800 LP的表达式。",
+  template:"return ____",
+  answer:"Duel.CheckLPCost(tp,800)",
+  hint:"CheckLPCost 的参数依次是 tp 和800。注意大小写。"
+},
+{
+  title:"PayLPCost：实际支付",
+  goal:"分清检查函数和支付函数。",
+  text:`
+    <p><code>Duel.PayLPCost(tp,800)</code> 执行LP代价支付。</p>
+    <p>它和 <code>CheckLPCost</code> 的职责不同：
+    前者做动作，后者做检查。</p>
+    <p>不要把支付函数当成检查函数使用，也不要指望它替你完成全部发动合法性判断。</p>
+    <p>支付LP代价不是“造成效果伤害”，不能为了扣同样的数字就随便改用伤害类API。</p>
+    <p>本函数不需要像 Duel.Draw 那样额外传 REASON_EFFECT 参数。</p>`,
+  example:`-- 检查
+Duel.CheckLPCost(tp,800)
+
+-- 实际支付
+Duel.PayLPCost(tp,800)`,
+  takeaway:"数值同样减少800，规则含义也可能不同。代价使用对应的代价API。",
+  steps:[
+    step("-- 支付前","本次发动已经确认合法，准备实际支付。",
+      [["LP","8000"],["手牌","5张"]]),
+    step("Duel.PayLPCost(tp,800)","支付800 LP代价。",
+      [["LP","7200"],["手牌","仍是5张"]]),
+    step("-- 等待效果处理","支付本身不会附带抽卡。",
+      [["代价","已支付"],["抽卡","尚未执行"]])
+  ],
+  question:"为什么不能只为了扣800 LP就把代价当成效果伤害？",
+  options:["因为规则含义不同","因为800不能写成数字","因为Lua没有数字运算"],
+  correct:0,
+  explanation:"伤害和代价不是同一规则事件，可能受到不同效果影响。",
+  prompt:"填写让发动玩家实际支付800 LP的完整语句。",
+  template:"-- 只在实际支付阶段执行\n____",
+  answer:"Duel.PayLPCost(tp,800)",
+  hint:"使用 PayLPCost，不是 CheckLPCost，也不需要第三个原因参数。"
+},
+{
+  title:"SetCost：绑定代价回调",
+  goal:"把之前学过的回调概念迁移到代价。",
+  text:`
+    <p><code>e1:SetCost(s.cost)</code> 将代价回调绑定到效果e1。</p>
+    <p>与 SetOperation 一样，这里交出的是函数值，不立即执行它。</p>
+    <p>不能写成 <code>SetCost(s.cost())</code>，
+    否则会先调用函数，再传递调用结果。</p>
+    <p>函数叫 cost 是命名习惯。真正告诉引擎使用它的是 SetCost。</p>
+    <p>SetCost 通常写在 initial_effect 内，和其他效果配置放在一起。</p>`,
+  example:`function s.initial_effect(c)
+    local e1=Effect.CreateEffect(c)
+    -- 其他配置……
+    e1:SetCost(s.cost)
+    c:RegisterEffect(e1)
+end`,
+  takeaway:"SetCost 负责绑定回调，既不检查，也不立即扣LP。",
+  steps:[
+    step("-- 刚创建e1","还没绑定代价函数。",
+      [["代价回调","未设置"],["LP","8000"]]),
+    step("e1:SetCost(s.cost)","登记函数引用。",
+      [["代价回调","s.cost"],["LP","仍是8000"]]),
+    step("-- 引擎稍后调用cost回调","调用时再根据chk决定检查还是支付。",
+      [["执行时机","之后的发动流程"],["不是","初始化时自动支付"]])
+  ],
+  question:"下面哪一行正确绑定代价函数？",
+  options:[
+    "e1:SetCost(s.cost())",
+    "e1:SetCost(s.cost)",
+    "Duel.PayLPCost(s.cost)"
+  ],
+  correct:1,
+  explanation:"SetCost 接收代价函数本身，不接收一次调用的返回结果。",
+  prompt:"输入完整的代价回调绑定语句。",
+  template:"-- 放在initial_effect中\n____",
+  answer:"e1:SetCost(s.cost)",
+  hint:"e1在冒号前；s.cost作为函数值放在括号中。"
+},
+{
+  title:"cost中的chk：检查与支付",
+  goal:"把两个API放进正确的分支。",
+  text:`
+    <p>cost 回调也会通过 <code>chk</code> 区分阶段。</p>
+    <p><code>chk==0</code>：询问能否支付，需要返回检查结果。</p>
+    <p>实际支付阶段：执行 <code>Duel.PayLPCost</code>。</p>
+    <p>检查分支中的 <code>return</code> 很重要：
+    它返回结果并结束这次函数调用，避免继续执行后面的支付代码。</p>
+    <p>不要在检查分支结束后无条件接着扣LP，却忘了return。</p>`,
+  example:costFunction,
+  takeaway:"检查分支return结果；实际支付分支才调用PayLPCost。",
+  steps:[
+    step("-- 引擎以chk=0调用cost",
+      "这是参数场景说明。函数进入检查分支。",
+      [["chk","0"],["LP","8000"]]),
+    step("return Duel.CheckLPCost(tp,800)",
+      "返回true并结束这次调用，不会继续往下支付。",
+      [["返回","true"],["LP","8000"],["PayLPCost执行次数","0"]]),
+    step("-- 引擎进入实际支付阶段",
+      "本次不进入chk==0分支，继续执行PayLPCost。",
+      [["执行","Duel.PayLPCost(tp,800)"],["LP","7200"]])
+  ],
+  question:"检查分支中的return为什么重要？",
+  options:[
+    "它负责把LP恢复",
+    "它返回结果并结束本次调用，避免继续支付",
+    "它会自动抽卡"
+  ],
+  correct:1,
+  explanation:"return不仅给出返回值，也会结束当前函数调用。",
+  prompt:"补全这个代价函数的两处空缺。保留本课骨架。",
+  template:"受限骨架检查，不执行任意Lua。\n允许空白、单行注释和行末分号。",
+  full:true,
+  starter:`function s.cost(e,tp,eg,ep,ev,re,r,rp,chk)
+    if chk==0 then
+        return ____
+    end
+    ____
+end`,
+  answer:costFunction,
+  hint:"第一处是CheckLPCost检查表达式；第二处是PayLPCost支付语句。"
+},
+{
+  title:"cost、target与operation配合",
+  goal:"理解能支付不等于一定能发动。",
+  text:`
+    <p>本例有两个不同的问题：</p>
+    <p><strong>cost检查：</strong>能否支付800 LP？</p>
+    <p><strong>target检查：</strong>能否进行本例需要的抽卡？</p>
+    <p>只通过其中一个，不代表发动合法。
+    例如LP充足但被禁止抽卡，不能为了“试试看”就先扣LP。</p>
+    <p>实际引擎可能多次调用检查，不应依赖检查调用次数或臆测所有内部检查顺序。</p>
+    <p>合法发动后，在发动手续中支付代价；之后处理效果时执行抽卡。</p>`,
+  example:`cost 检查：
+    Duel.CheckLPCost(tp,800)
+
+target 检查：
+    Duel.IsPlayerCanDraw(tp,1)
+
+实际支付：
+    Duel.PayLPCost(tp,800)
+
+效果处理：
+    Duel.Draw(tp,1,REASON_EFFECT)`,
+  takeaway:"不同检查各管一件事。发动不合法时，不应产生实际支付。",
+  steps:[
+    step("-- LP8000，但被禁止抽卡",
+      "代价检查通过，不代表整体可以发动。",
+      [["cost检查","通过"],["target检查","不通过"],["LP","仍是8000"]]),
+    step("-- LP799，可以抽卡",
+      "抽卡检查通过，也不能弥补无法支付代价。",
+      [["cost检查","不通过"],["target检查","通过"],["LP","仍是799"]]),
+    step("-- LP8000，并且可以抽卡",
+      "本教学场景满足两项检查，才进行正式发动。",
+      [["检查","通过"],["发动时支付后LP","7200"],["手牌","仍是5张"]]),
+    step("-- 后续正常处理",
+      "抽卡属于operation，不属于cost。",
+      [["LP","7200"],["手牌","6张"]])
+  ],
+  question:"LP充足但玩家被禁止抽卡，本例应怎样处理？",
+  options:[
+    "先支付，再因为不能抽卡而结束",
+    "不能发动，不实际支付",
+    "支付两倍LP即可抽卡"
+  ],
+  correct:1,
+  explanation:"本例抽卡合法性不满足，不能进入实际发动支付流程。",
+  prompt:"填写target中检查能否抽1张卡的表达式。",
+  template:"if chk==0 then\n    return ____\nend",
+  answer:"Duel.IsPlayerCanDraw(tp,1)",
+  hint:"这里仍然检查抽卡能力，不是把LP检查复制进来。"
+},
+{
+  title:"效果无效后代价会退还吗",
+  goal:"把代价支付和效果成功与否彻底分开。",
+  text:`
+    <p>假设卡片已经合法发动，800 LP也已经支付。</p>
+    <p>之后效果被无效，或者处理时抽卡不能进行，
+    <strong>已支付的代价不会因此自动退还</strong>。</p>
+    <p>所以不要在 operation 里编写“没抽成就把800 LP加回来”。</p>
+    <p>本课程只演示效果被无效的简单场景。
+    “发动被无效”和“效果被无效”有其他区别，但不能据此认为已支付代价会自动退款。</p>
+    <p>若另一张卡或特定效果明确提供恢复等处理，那是额外效果，不是代价系统自动退还。</p>`,
+  example:`发动前：8000 LP
+支付代价后：7200 LP
+之后效果被无效：仍然是7200 LP
+
+不会自动：
+7200 → 8000`,
+  takeaway:"代价已经为发动支付，不以之后效果成功为退款条件。",
+  steps:[
+    step("-- 合法发动并支付",
+      "800 LP已经作为代价支付。",
+      [["LP","7200"],["手牌","5张"],["状态","等待处理"]]),
+    step("-- 效果被无效",
+      "本场景不执行抽卡效果。",
+      [["抽卡","没有发生"],["手牌","5张"]]),
+    step("-- 处理结束",
+      "没有自动退还已经支付的800 LP。",
+      [["LP","仍是7200"],["自动退款","没有"]])
+  ],
+  question:"合法发动并支付800 LP后，抽卡效果被无效，LP会怎样？",
+  options:["自动恢复800","保持已经支付后的数值","因为失败再扣800"],
+  correct:1,
+  explanation:"代价不会因为效果被无效或处理失败而自动退还。",
+  prompt:"初始8000 LP，支付800后效果被无效。没有其他影响时，最后LP是多少？",
+  template:"8000 - 800 = ____",
+  answer:"7200",
+  hint:"不要把已支付代价加回来，也不要重复支付。"
+},
+{
+  title:"组装：支付800，抽1张",
+  goal:"在上一阶段的抽卡魔法上，只增加代价相关代码。",
+  text:`
+    <p>最终卡片：<strong>支付800 LP；自己抽1张卡。</strong></p>
+    <p>相比上一阶段，主要新增两部分：</p>
+    <p>① 在initial_effect中绑定 <code>SetCost(s.cost)</code>。</p>
+    <p>② 定义cost回调，分别检查和支付。</p>
+    <p>抽卡类别、target检查、处理信息和operation保持原来的职责。</p>
+    <p><code>CATEGORY_DRAW</code> 仍描述抽卡处理。
+    不要因为支付了LP代价，就把它标记成“造成伤害”的效果。</p>`,
+  example:`新增绑定：
+    e1:SetCost(s.cost)
+
+新增回调：
+    chk==0 → CheckLPCost
+    实际支付 → PayLPCost
+
+原有处理：
+    target → 检查抽卡、登记信息
+    operation → Draw`,
+  takeaway:"用已有结构加一个cost回调，而不是把所有逻辑塞进operation。",
+  steps:[
+    step("e1:SetCost(s.cost)",
+      "初始化时仅绑定，不支付。",
+      [["LP","8000"],["cost回调","已绑定"]]),
+    step("-- 合法性检查",
+      "确认能够支付，也确认本例能够抽卡。",
+      [["LP检查","通过"],["抽卡检查","通过"],["LP","8000"]]),
+    step("Duel.PayLPCost(tp,800)",
+      "正式发动，实际支付代价。",
+      [["LP","7200"],["手牌","5张"]]),
+    step("Duel.SetOperationInfo(0,CATEGORY_DRAW,nil,0,tp,1)",
+      "正式target登记预计处理，不执行抽卡。",
+      [["预计处理","抽1张"],["手牌","仍是5张"]]),
+    step("Duel.Draw(tp,1,REASON_EFFECT)",
+      "本次没有其他影响，正常处理。",
+      [["LP","7200"],["手牌","6张"]])
+  ],
+  question:"相较上一阶段，代价主要增加在哪两个位置？",
+  options:[
+    "数据库卡名与等级",
+    "SetCost绑定，以及cost回调",
+    "把operation改名为PayLPCost"
+  ],
+  correct:1,
+  explanation:"初始化时绑定cost；cost回调中实现检查与支付。",
+  prompt:"补全完整脚本中的四处 ____。其余代码沿用上一阶段。",
+  template:"受限骨架检查，不是Lua编译器。\n允许空白、单行注释和行末分号。",
+  full:true,
+  starter:`local s,id=GetID()
+
+function s.initial_effect(c)
+    local e1=Effect.CreateEffect(c)
+    e1:SetCategory(CATEGORY_DRAW)
+    e1:SetType(EFFECT_TYPE_ACTIVATE)
+    e1:SetCode(EVENT_FREE_CHAIN)
+    e1:SetCost(____)
+    e1:SetTarget(s.target)
+    e1:SetOperation(s.operation)
+    c:RegisterEffect(e1)
+end
+
+function s.cost(e,tp,eg,ep,ev,re,r,rp,chk)
+    if chk==0 then
+        return ____
+    end
+    ____
+end
+
+function s.target(e,tp,eg,ep,ev,re,r,rp,chk)
+    if chk==0 then
+        return Duel.IsPlayerCanDraw(tp,1)
+    end
+    Duel.SetOperationInfo(0,CATEGORY_DRAW,nil,0,tp,1)
+end
+
+function s.operation(e,tp,eg,ep,ev,re,r,rp)
+    ____
+end`,
+  answer:completeScript,
+  hint:"四处依次是s.cost、检查LP代价、实际支付LP代价、实际抽卡。"
+}
+];
+
+/* ---------- 学习记录 ---------- */
+const KEY="ygo-stage3-cost-v1";
+let state={current:0,records:{}};
+
+try{
+  const saved=JSON.parse(localStorage.getItem(KEY)||"null");
+  if(saved && typeof saved==="object"){
+    if(Number.isInteger(saved.current) &&
+      saved.current>=0 && saved.current<lessons.length){
+      state.current=saved.current;
+    }
+    if(saved.records && typeof saved.records==="object" &&
+      !Array.isArray(saved.records)){
+      state.records=saved.records;
+    }
+  }
+}catch{
+  $("storageNotice").textContent="无法读取学习记录，本次仍可正常学习。";
+}
+
+function record(i=state.current){
+  if(!state.records[i] || typeof state.records[i]!=="object"){
+    state.records[i]={
+      step:0,observed:false,quiz:false,exercise:false,draft:null
+    };
+  }
+  const r=state.records[i];
+  if(!Number.isInteger(r.step)||r.step<0||r.step>=lessons[i].steps.length){
+    r.step=0;
+  }
+  return r;
+}
+
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(state));}
+  catch{$("storageNotice").textContent="当前浏览器无法保存学习记录。";}
+}
+
+function complete(i){
+  const r=record(i);
+  return r.observed&&r.quiz&&r.exercise;
+}
+
+function refresh(){
+  $("nav").replaceChildren();
+
+  lessons.forEach((l,i)=>{
+    const b=document.createElement("button");
+    b.className=i===state.current?"active":"";
+    if(i===state.current)b.setAttribute("aria-current","step");
+    b.innerHTML=
+      `<span class="num">${23+i}</span>`+
+      `<span>${esc(l.title)}</span>`+
+      `<span class="tick">${complete(i)?"✓":""}</span>`;
+    b.onclick=()=>openLesson(i);
+    $("nav").appendChild(b);
+  });
+
+  const count=lessons.filter((_,i)=>complete(i)).length;
+  $("progressText").textContent=`${count} / ${lessons.length}`;
+  $("progressBar").style.width=`${count/lessons.length*100}%`;
+
+  const r=record();
+  $("checklist").innerHTML=[
+    [r.observed,"看完全部观察步骤"],
+    [r.quiz,"答对理解题"],
+    [r.exercise,"完成本课小练习"]
+  ].map(([ok,text])=>
+    `<div class="${ok?"goodText":"muted"}">${ok?"✓":"○"} ${text}</div>`
+  ).join("");
+
+  $("lessonStatus").textContent=
+    complete(state.current)?"✓ 本课已完成":"按自己的节奏慢慢来";
+}
+
+function renderStep(){
+  const l=lessons[state.current],r=record(),s=l.steps[r.step];
+  $("visual").innerHTML=
+    `<div class="visualTitle">教学场景 · 第 ${r.step+1} 步</div>`+
+    box("当前状态",s.fields);
+
+  $("stepCode").textContent=s.code;
+  $("stepCaption").textContent=s.caption;
+  $("stepCount").textContent=`观察进度：${r.step+1} / ${l.steps.length}`;
+  $("previousStep").disabled=r.step===0;
+  $("nextStep").disabled=r.step===l.steps.length-1;
+  $("nextStep").textContent=
+    r.step===l.steps.length-1?"观察完毕 ✓":"观察下一步 →";
+
+  if(r.step===l.steps.length-1)r.observed=true;
+  save();refresh();
+}
+
+function renderQuiz(){
+  const l=lessons[state.current],r=record();
+  $("question").textContent=l.question;
+  $("options").replaceChildren();
+
+  l.options.forEach((text,i)=>{
+    const b=document.createElement("button");
+    b.className="option"+(r.quiz&&i===l.correct?" good":"");
+    b.textContent=String.fromCharCode(65+i)+". "+text;
+
+    b.onclick=()=>{
+      document.querySelectorAll("#options .option").forEach(x=>{
+        x.classList.remove("good","bad");
+      });
+      const ok=i===l.correct;
+      b.classList.add(ok?"good":"bad");
+
+      $("quizFeedback").className=
+        "feedback "+(ok?"goodText":"badText");
+      $("quizFeedback").textContent=ok?
+        "正确！"+l.explanation:
+        "还不对，回看本课知识点后可以继续选择，不扣分。";
+
+      if(ok){r.quiz=true;save();refresh();}
+    };
+    $("options").appendChild(b);
+  });
+
+  $("quizFeedback").className="feedback"+(r.quiz?" goodText":"");
+  $("quizFeedback").textContent=r.quiz?
+    "✓ 已答对。"+l.explanation:"";
+}
+
+function openLesson(i){
+  if(i<0||i>=lessons.length)return;
+  state.current=i;
+  const l=lessons[i],r=record();
+
+  $("lessonTag").textContent=`第三阶段 · 第 ${23+i} 课`;
+  $("lessonTitle").textContent=l.title;
+  $("lessonGoal").textContent=l.goal;
+  $("lessonText").innerHTML=l.text;
+  $("example").textContent=l.example;
+  $("takeaway").textContent="记住这一句："+l.takeaway;
+
+  $("exercisePrompt").textContent=l.prompt;
+  $("exerciseTemplate").textContent=l.template;
+  $("exerciseHint").textContent=l.hint;
+  $("exerciseSolution").textContent=l.answer;
+  $("answerInput").hidden=!!l.full;
+  $("codeInput").hidden=!l.full;
+
+  $("inputLabel").htmlFor=l.full?"codeInput":"answerInput";
+  $("inputLabel").textContent=l.full?
+    "补全下面的代码":"在下方填写空缺部分";
+
+  const input=l.full?$("codeInput"):$("answerInput");
+  input.value=typeof r.draft==="string"?r.draft:(l.starter||"");
+
+  $("exerciseFeedback").className="feedback"+(r.exercise?" goodText":"");
+  $("exerciseFeedback").textContent=r.exercise?
+    "✓ 已通过本课练习，可以再次复习。":"";
+
+  $("hintDetails").open=false;
+  $("solutionDetails").open=false;
+  $("previousLesson").disabled=i===0;
+  $("nextLesson").disabled=i===lessons.length-1;
+  $("nextLesson").textContent=
+    i===lessons.length-1?"本阶段最后一课":"下一课 →";
+
+  renderQuiz();renderStep();save();
+}
+
+$("previousStep").onclick=()=>{
+  if(record().step>0){record().step--;renderStep();}
+};
+$("nextStep").onclick=()=>{
+  if(record().step<lessons[state.current].steps.length-1){
+    record().step++;renderStep();
+  }
+};
+$("previousLesson").onclick=()=>{
+  openLesson(state.current-1);
+  window.scrollTo({top:0,behavior:"smooth"});
+};
+$("nextLesson").onclick=()=>{
+  openLesson(state.current+1);
+  window.scrollTo({top:0,behavior:"smooth"});
+};
+
+/* ---------- 受限练习检查 ---------- */
+function norm(s){
+  return s.trim().replace(/\s+/g,"").replace(/;+$/,"");
+}
+function codeLines(s){
+  return s.split(/\r?\n/)
+    .map(line=>line.replace(/--.*$/,"").trim())
+    .filter(Boolean)
+    .map(norm);
+}
+function checkExercise(){
+  const l=lessons[state.current],r=record();
+  const value=(l.full?$("codeInput"):$("answerInput")).value;
+  r.draft=value;
+
+  let ok=false,message="";
+  if(l.full){
+    const actual=codeLines(value),expected=codeLines(l.answer);
+    const mismatch=expected.findIndex((line,i)=>line!==actual[i]);
+    ok=mismatch===-1&&actual.length===expected.length;
+    message=mismatch!==-1?
+      `有效代码第 ${mismatch+1} 行仍需调整。请检查占位符、大小写及参数。`:
+      "存在额外代码。本题只检查给定骨架。";
+  }else{
+    ok=norm(value)===norm(l.answer);
+  }
+
+  $("exerciseFeedback").className=
+    "feedback "+(ok?"goodText":"badText");
+  $("exerciseFeedback").textContent=ok?
+    (l.full?
+      "✓ 骨架正确！这是结构检查，不是实际引擎执行结果。":
+      "✓ 正确！再确认一次：它是在检查、支付，还是处理效果？"):
+    (message||
+      "暂时不匹配。请检查大小写、点号和冒号，只填写题目要求的部分。");
+
+  if(ok)r.exercise=true;
+  save();refresh();
+}
+
+$("checkAnswer").onclick=checkExercise;
+$("resetAnswer").onclick=()=>{
+  const l=lessons[state.current],input=l.full?$("codeInput"):$("answerInput");
+  input.value=l.starter||"";
+  record().draft=input.value;save();
+  $("exerciseFeedback").className="feedback muted";
+  $("exerciseFeedback").textContent="输入已重置，已有通过记录保留。";
+};
+
+["answerInput","codeInput"].forEach(id=>{
+  $(id).addEventListener("input",e=>{
+    record().draft=e.target.value;save();
+  });
+});
+
+$("answerInput").addEventListener("keydown",e=>{
+  if(e.key==="Enter")checkExercise();
+});
+$("codeInput").addEventListener("keydown",e=>{
+  if(e.key==="Tab"){
+    e.preventDefault();
+    e.target.setRangeText(
+      "    ",e.target.selectionStart,e.target.selectionEnd,"end"
+    );
+    e.target.dispatchEvent(new Event("input"));
+  }
+  if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){
+    e.preventDefault();checkExercise();
+  }
+});
+
+$("clearProgress").onclick=()=>{
+  if(!confirm("清空第三阶段的记录和草稿？前两阶段不受影响。"))return;
+  state={current:0,records:{}};
+  save();openLesson(0);
+};
+
+/* ---------- 固定规则的LP代价教学实验台 ---------- */
+let lab;
+function tp(){return Number($("player").value);}
+function canPay(){
+  // 仅用于本教学场景，不替代真实引擎的CheckLPCost。
+  return lab.lp[tp()]>=800;
+}
+function canDraw(){
+  return !$("cannotDraw").checked;
+}
+function appendLog(text){
+  lab.log.push(text);
+  if(lab.log.length>120)lab.log.shift();
+}
+function resetLab(){
+  const p=tp();
+  lab={
+    phase:"new",
+    lp:[8000,8000],
+    hand:[5,5],
+    deck:[20,20],
+    paid:0,
+    info:false,
+    log:["新场景：尚未初始化。卡片自身的移动不计入教学手牌数字。"]
+  };
+  lab.lp[p]=Number($("initialLP").value);
+  $("cannotDraw").checked=false;
+  $("negated").checked=false;
+  renderLab();
+}
+function renderLab(){
+  $("phase").innerHTML=[
+    ["new","未初始化"],
+    ["ready","可以申请发动"],
+    ["chain","代价已支付，等待处理"],
+    ["done","处理结束"]
+  ].map(([key,text])=>
+    `<span class="${lab.phase===key?"active":""}">${text}</span>`
+  ).join("");
+
+  $("players").innerHTML=[0,1].map(i=>box(
+    `玩家${i}${i===tp()?" · 发动者":""}`,
+    [
+      ["LP",lab.lp[i]],
+      ["手牌",lab.hand[i]+"张"],
+      ["卡组",lab.deck[i]+"张"]
+    ]
+  )).join("");
+
+  $("engineState").innerHTML=box("本次发动记录",[
+    ["代价要求","800 LP"],
+    ["实际已支付",lab.paid+" LP"],
+    ["预计处理",lab.info?`玩家${tp()}抽1张`:"尚未登记"],
+    ["抽卡限制",canDraw()?"无":"发动者被禁止抽卡"]
+  ]);
+
+  $("initialize").disabled=lab.phase!=="new";
+  $("inspect").disabled=lab.phase!=="ready";
+  $("activate").disabled=lab.phase!=="ready";
+  $("resolve").disabled=lab.phase!=="chain";
+
+  $("labLog").textContent=lab.log.join("\n");
+  $("labLog").scrollTop=$("labLog").scrollHeight;
+}
+
+$("initialize").onclick=()=>{
+  if(lab.phase!=="new")return;
+  lab.phase="ready";
+  appendLog("① initial_effect：创建并配置发动效果。");
+  appendLog("  SetCost(s.cost)：绑定代价回调，没有立即支付。");
+  appendLog("  SetTarget / SetOperation：绑定检查与处理函数。");
+  appendLog("  RegisterEffect：注册完成。LP和手牌均未改变。");
+  renderLab();
+};
+
+$("inspect").onclick=()=>{
+  if(lab.phase!=="ready")return;
+  appendLog("② 仅检查（下面的展示顺序不代表引擎所有内部调用顺序）。");
+  appendLog(`  cost检查：CheckLPCost(${tp()},800) → ${canPay()?"true":"false"}`);
+  appendLog(`  target检查：IsPlayerCanDraw(${tp()},1) → ${canDraw()?"true":"false"}`);
+  appendLog(`  本教学场景：${canPay()&&canDraw()?"具备发动条件":"不具备发动条件"}。`);
+  appendLog("  未调用PayLPCost，未调用Draw。LP和手牌不变。");
+  renderLab();
+};
+
+$("activate").onclick=()=>{
+  if(lab.phase!=="ready")return;
+  appendLog("③ 申请发动：重新确认当前状态。");
+
+  if(!canPay()||!canDraw()){
+    if(!canPay())appendLog("  失败原因：本场景LP不足以支付800。");
+    if(!canDraw())appendLog("  失败原因：本例要求抽卡，但发动玩家被禁止抽卡。");
+    appendLog("  发动不成立，没有实际支付LP。");
+  }else{
+    lab.lp[tp()]-=800;
+    lab.paid=800;
+    lab.info=true;
+    lab.phase="chain";
+
+    appendLog(`  实际支付：Duel.PayLPCost(${tp()},800)。`);
+    appendLog(`  玩家${tp()}的LP变为${lab.lp[tp()]}。`);
+    appendLog("  正式target：登记预计抽1张卡的处理信息。");
+    appendLog("  进入连锁等待处理。手牌尚未增加。");
+  }
+  renderLab();
+};
+
+$("resolve").onclick=()=>{
+  if(lab.phase!=="chain")return;
+  appendLog("④ 连锁处理开始。");
+
+  if($("negated").checked){
+    appendLog("  本教学场景中效果被无效，不执行抽卡处理。");
+  }else{
+    appendLog(`  operation：Duel.Draw(${tp()},1,REASON_EFFECT)。`);
+    if(!canDraw()){
+      appendLog("  发动后出现禁止抽卡状态，本次不能执行抽卡。");
+    }else{
+      lab.hand[tp()]++;
+      lab.deck[tp()]--;
+      appendLog(`  玩家${tp()}实际抽1张，手牌变为${lab.hand[tp()]}张。`);
+    }
+  }
+
+  appendLog(`  已支付的800 LP不自动退还。当前LP：${lab.lp[tp()]}。`);
+  appendLog("  本次流程结束。可以重置后测试其他场景。");
+  lab.phase="done";
+  renderLab();
+};
+
+$("cannotDraw").onchange=()=>{
+  appendLog("场景变化：发动玩家"+(
+    $("cannotDraw").checked?"被禁止抽卡。":"不再被禁止抽卡。"
+  ));
+  renderLab();
+};
+$("negated").onchange=()=>{
+  appendLog("场景设置：处理时效果"+(
+    $("negated").checked?"被无效。":"不被无效。"
+  ));
+  renderLab();
+};
+
+$("player").onchange=resetLab;
+$("initialLP").onchange=resetLab;
+$("resetLab").onclick=resetLab;
+
+/* ---------- 术语字典 ---------- */
+const terms=[
+  ["发动代价","为发动效果而支付的要求，不等待效果处理成功后再支付。"],
+  ["Duel.CheckLPCost(tp,800)","检查指定玩家能否支付800 LP代价；本身不支付。"],
+  ["Duel.PayLPCost(tp,800)","实际执行LP代价支付。不是效果伤害，也不附带抽卡。"],
+  ["e1:SetCost(s.cost)","把cost函数绑定给效果e1，不立即调用。"],
+  ["s.cost","本课代价回调的命名。函数名可以不同，但绑定必须对应。"],
+  ["cost中的chk==0","检查能否支付，返回检查结果，不实际支付。"],
+  ["return","返回结果，并结束本次函数调用。"],
+  ["target检查","本例判断能否抽卡，不是再次支付LP。"],
+  ["operation","效果处理回调。本例只执行抽卡，不负责支付代价或退款。"],
+  ["代价不自动退还","效果被无效或处理未成功，不会自动返还已经支付的代价。"],
+  ["CATEGORY_DRAW","本例的效果处理类别。LP代价不应因此被误标为伤害效果。"]
+];
+
+$("glossary").innerHTML=terms.map(([name,text])=>
+  `<div style="margin-top:14px">
+    <strong style="color:var(--blue)">${esc(name)}</strong>
+    <div class="muted">${esc(text)}</div>
+  </div>`
+).join("");
+
+openLesson(state.current);
+resetLab();
+</script>
+<script src="progress-sync.js"></script>
+</body>
+</html>

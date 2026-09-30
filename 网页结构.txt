@@ -1,0 +1,14 @@
+ygo-learning/
+├── index.html
+├── assets/
+│   ├── app.css
+│   └── app.js
+├── courses/
+│   ├── stage-01.js
+│   ├── stage-02.js
+│   ├── stage-03.js
+│   └── stage-04.js
+└── labs/
+    ├── activation.js
+    ├── lp-cost.js
+    └── filtering.js

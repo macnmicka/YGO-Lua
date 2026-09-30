@@ -1,0 +1,1931 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+  <meta
+    name="description"
+    content="一个可以在浏览器中交互式学习 Lua 的网页"
+  />
+
+  <title>Lua 交互式学习平台</title>
+
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #11182d;
+      --panel-light: #18213a;
+      --panel-hover: #202c4a;
+      --border: #293656;
+      --text: #e8edff;
+      --text-muted: #9da9c7;
+      --primary: #6c8cff;
+      --primary-hover: #87a0ff;
+      --success: #3ddc97;
+      --warning: #ffc857;
+      --danger: #ff6b7a;
+      --code-bg: #080c18;
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
+      --radius: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(
+          circle at 15% 10%,
+          rgba(108, 140, 255, 0.15),
+          transparent 30%
+        ),
+        radial-gradient(
+          circle at 85% 80%,
+          rgba(61, 220, 151, 0.08),
+          transparent 28%
+        ),
+        var(--bg);
+      font-family:
+        Inter,
+        "PingFang SC",
+        "Microsoft YaHei",
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    }
+
+    button,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      border: none;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    /* 侧边栏 */
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 22px 16px;
+      overflow-y: auto;
+      background: rgba(10, 15, 30, 0.92);
+      border-right: 1px solid var(--border);
+      backdrop-filter: blur(18px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 8px 20px;
+    }
+
+    .brand-icon {
+      display: grid;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      flex: 0 0 auto;
+      color: white;
+      font-size: 25px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #3655db, #866bff);
+      border-radius: 50%;
+      box-shadow: 0 8px 25px rgba(108, 140, 255, 0.35);
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .brand p {
+      margin: 4px 0 0;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    .progress-card {
+      padding: 15px;
+      margin-bottom: 18px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+
+    .progress-info {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+      font-size: 13px;
+    }
+
+    .progress-info span:last-child {
+      color: var(--success);
+      font-weight: 700;
+    }
+
+    .progress-track {
+      height: 8px;
+      overflow: hidden;
+      background: #080c18;
+      border-radius: 999px;
+    }
+
+    .progress-value {
+      width: 0;
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--success));
+      border-radius: inherit;
+      transition: width 0.35s ease;
+    }
+
+    .chapter-label {
+      margin: 12px 8px 8px;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .lesson-list {
+      display: grid;
+      gap: 7px;
+    }
+
+    .lesson-button {
+      display: grid;
+      grid-template-columns: 34px 1fr auto;
+      align-items: center;
+      width: 100%;
+      padding: 10px;
+      color: var(--text-muted);
+      text-align: left;
+      cursor: pointer;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 11px;
+      transition:
+        background 0.2s,
+        color 0.2s,
+        border-color 0.2s,
+        transform 0.2s;
+    }
+
+    .lesson-button:hover {
+      color: var(--text);
+      background: var(--panel-light);
+      transform: translateX(2px);
+    }
+
+    .lesson-button.active {
+      color: white;
+      background: rgba(108, 140, 255, 0.14);
+      border-color: rgba(108, 140, 255, 0.5);
+    }
+
+    .lesson-number {
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      font-size: 12px;
+      font-weight: 800;
+      background: var(--panel-light);
+      border-radius: 8px;
+    }
+
+    .lesson-button.active .lesson-number {
+      color: white;
+      background: var(--primary);
+    }
+
+    .lesson-title-small {
+      overflow: hidden;
+      font-size: 13px;
+      font-weight: 650;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .lesson-check {
+      color: var(--success);
+      font-weight: 900;
+    }
+
+    .reset-progress {
+      width: 100%;
+      padding: 10px;
+      margin-top: 20px;
+      color: var(--text-muted);
+      cursor: pointer;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
+    .reset-progress:hover {
+      color: var(--danger);
+      border-color: var(--danger);
+    }
+
+    /* 主内容 */
+
+    .main {
+      width: 100%;
+      max-width: 1500px;
+      padding: 34px;
+      margin: 0 auto;
+    }
+
+    .hero {
+      padding: 26px;
+      margin-bottom: 24px;
+      background:
+        linear-gradient(
+          120deg,
+          rgba(108, 140, 255, 0.16),
+          rgba(61, 220, 151, 0.06)
+        ),
+        var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .lesson-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      margin-bottom: 10px;
+      color: #b9c6ff;
+      font-size: 12px;
+      font-weight: 700;
+      background: rgba(108, 140, 255, 0.13);
+      border: 1px solid rgba(108, 140, 255, 0.3);
+      border-radius: 999px;
+    }
+
+    .hero h2 {
+      margin: 0;
+      font-size: clamp(25px, 4vw, 38px);
+      line-height: 1.2;
+    }
+
+    .hero-description {
+      max-width: 850px;
+      margin: 13px 0 0;
+      color: var(--text-muted);
+      line-height: 1.8;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: minmax(320px, 0.9fr) minmax(420px, 1.1fr);
+      gap: 22px;
+      align-items: start;
+    }
+
+    .card {
+      overflow: hidden;
+      background: rgba(17, 24, 45, 0.9);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .card + .card {
+      margin-top: 20px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .card-header h3 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .card-body {
+      padding: 18px;
+    }
+
+    .theory {
+      color: #c8d1e9;
+      font-size: 15px;
+      line-height: 1.8;
+    }
+
+    .theory p:first-child {
+      margin-top: 0;
+    }
+
+    .theory p:last-child {
+      margin-bottom: 0;
+    }
+
+    .theory code,
+    .challenge code {
+      padding: 2px 6px;
+      color: #a9f3d2;
+      background: #0a1221;
+      border: 1px solid #263651;
+      border-radius: 5px;
+      font-family: "JetBrains Mono", Consolas, monospace;
+    }
+
+    .theory ul {
+      padding-left: 22px;
+    }
+
+    .theory li + li {
+      margin-top: 6px;
+    }
+
+    .challenge {
+      padding: 15px;
+      color: #d9e0f4;
+      background: rgba(255, 200, 87, 0.07);
+      border: 1px solid rgba(255, 200, 87, 0.28);
+      border-radius: 11px;
+      line-height: 1.7;
+    }
+
+    .challenge strong {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--warning);
+    }
+
+    .expected-output {
+      padding: 13px;
+      margin-top: 13px;
+      color: #b8c6e7;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+    }
+
+    .expected-output span {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    .expected-output pre {
+      margin: 0;
+      white-space: pre-wrap;
+      font-family: "JetBrains Mono", Consolas, monospace;
+    }
+
+    /* 编辑器 */
+
+    .editor-card {
+      position: sticky;
+      top: 20px;
+    }
+
+    .editor-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .button {
+      padding: 9px 13px;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      background: var(--panel-light);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      transition:
+        transform 0.15s,
+        background 0.15s,
+        border-color 0.15s;
+    }
+
+    .button:hover {
+      background: var(--panel-hover);
+      transform: translateY(-1px);
+    }
+
+    .button.primary {
+      color: white;
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .button.primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .button.success {
+      color: #052c1d;
+      background: var(--success);
+      border-color: var(--success);
+    }
+
+    .button:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+      transform: none;
+    }
+
+    .editor-wrapper {
+      position: relative;
+      background: var(--code-bg);
+    }
+
+    .editor-label {
+      display: flex;
+      justify-content: space-between;
+      padding: 9px 14px;
+      color: var(--text-muted);
+      font-size: 12px;
+      background: #0d1324;
+      border-bottom: 1px solid var(--border);
+    }
+
+    #codeEditor {
+      display: block;
+      width: 100%;
+      min-height: 340px;
+      padding: 18px;
+      color: #d9e4ff;
+      caret-color: var(--success);
+      resize: vertical;
+      outline: none;
+      background: var(--code-bg);
+      border: none;
+      tab-size: 4;
+      line-height: 1.65;
+      font-family:
+        "JetBrains Mono",
+        "Cascadia Code",
+        Consolas,
+        monospace;
+      font-size: 14px;
+    }
+
+    #codeEditor:focus {
+      box-shadow: inset 0 0 0 1px var(--primary);
+    }
+
+    .output-area {
+      min-height: 145px;
+      max-height: 280px;
+      padding: 16px;
+      margin: 0;
+      overflow: auto;
+      color: #c6f9df;
+      background: #060a13;
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.6;
+      font-family:
+        "JetBrains Mono",
+        Consolas,
+        monospace;
+      font-size: 13px;
+    }
+
+    .output-area.error {
+      color: #ff9da7;
+    }
+
+    .output-area.muted {
+      color: var(--text-muted);
+    }
+
+    .run-status {
+      padding: 10px 16px;
+      color: var(--text-muted);
+      font-size: 12px;
+      background: #0d1324;
+      border-top: 1px solid var(--border);
+    }
+
+    .run-status.success {
+      color: var(--success);
+    }
+
+    .run-status.error {
+      color: var(--danger);
+    }
+
+    .hint-box {
+      display: none;
+      padding: 13px;
+      margin-top: 14px;
+      color: #ffe7aa;
+      background: rgba(255, 200, 87, 0.08);
+      border: 1px solid rgba(255, 200, 87, 0.28);
+      border-radius: 10px;
+      line-height: 1.7;
+    }
+
+    .hint-box.visible {
+      display: block;
+    }
+
+    /* 选择题 */
+
+    .quiz-question {
+      margin: 0 0 14px;
+      line-height: 1.7;
+    }
+
+    .quiz-options {
+      display: grid;
+      gap: 9px;
+    }
+
+    .quiz-option {
+      width: 100%;
+      padding: 12px 14px;
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+      background: var(--panel-light);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
+    .quiz-option:hover {
+      border-color: var(--primary);
+    }
+
+    .quiz-option.correct {
+      color: #bfffe0;
+      background: rgba(61, 220, 151, 0.12);
+      border-color: var(--success);
+    }
+
+    .quiz-option.wrong {
+      color: #ffd0d4;
+      background: rgba(255, 107, 122, 0.11);
+      border-color: var(--danger);
+    }
+
+    .quiz-feedback {
+      min-height: 24px;
+      margin-top: 12px;
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* 页脚与导航 */
+
+    .lesson-navigation {
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+      margin-top: 24px;
+    }
+
+    .nav-button {
+      min-width: 120px;
+    }
+
+    .toast {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      z-index: 1000;
+      max-width: min(380px, calc(100vw - 48px));
+      padding: 14px 17px;
+      color: white;
+      background: #18213a;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(15px);
+      transition:
+        opacity 0.25s,
+        transform 0.25s;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .toast.success {
+      border-color: var(--success);
+    }
+
+    .toast.error {
+      border-color: var(--danger);
+    }
+
+    @media (max-width: 1050px) {
+      .content-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .editor-card {
+        position: static;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .app {
+        display: block;
+      }
+
+      .sidebar {
+        position: static;
+        width: 100%;
+        height: auto;
+        padding: 14px;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .brand {
+        padding-bottom: 12px;
+      }
+
+      .chapter-label,
+      .reset-progress {
+        display: none;
+      }
+
+      .progress-card {
+        margin-bottom: 12px;
+      }
+
+      .lesson-list {
+        display: flex;
+        padding-bottom: 5px;
+        overflow-x: auto;
+      }
+
+      .lesson-button {
+        min-width: 155px;
+      }
+
+      .main {
+        padding: 18px 14px 30px;
+      }
+
+      .hero {
+        padding: 20px;
+      }
+
+      .card-header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .editor-actions {
+        width: 100%;
+      }
+
+      .editor-actions .button {
+        flex: 1;
+      }
+
+      #codeEditor {
+        min-height: 300px;
+        font-size: 13px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">Lua</div>
+
+        <div>
+          <h1>Lua 学习实验室</h1>
+          <p>从基础语法到综合练习</p>
+        </div>
+      </div>
+
+      <div class="progress-card">
+        <div class="progress-info">
+          <span>学习进度</span>
+          <span id="progressText">0 / 8</span>
+        </div>
+
+        <div class="progress-track">
+          <div class="progress-value" id="progressValue"></div>
+        </div>
+      </div>
+
+      <div class="chapter-label">课程目录</div>
+
+      <nav class="lesson-list" id="lessonList"></nav>
+
+      <button class="reset-progress" id="resetProgressButton">
+        重置学习进度
+      </button>
+    </aside>
+
+    <main class="main">
+      <section class="hero">
+        <div class="lesson-tag" id="lessonTag">第 1 课</div>
+        <h2 id="lessonTitle">你好，Lua！</h2>
+        <p class="hero-description" id="lessonDescription"></p>
+      </section>
+
+      <div class="content-grid">
+        <div>
+          <section class="card">
+            <div class="card-header">
+              <h3>📖 知识讲解</h3>
+            </div>
+
+            <div class="card-body theory" id="lessonTheory"></div>
+          </section>
+
+          <section class="card">
+            <div class="card-header">
+              <h3>🎯 编程练习</h3>
+            </div>
+
+            <div class="card-body">
+              <div class="challenge" id="lessonChallenge"></div>
+
+              <div class="expected-output">
+                <span>预期输出</span>
+                <pre id="expectedOutput"></pre>
+              </div>
+
+              <div class="hint-box" id="hintBox"></div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-header">
+              <h3>🧠 知识小测</h3>
+            </div>
+
+            <div class="card-body">
+              <p class="quiz-question" id="quizQuestion"></p>
+              <div class="quiz-options" id="quizOptions"></div>
+              <div class="quiz-feedback" id="quizFeedback"></div>
+            </div>
+          </section>
+        </div>
+
+        <section class="card editor-card">
+          <div class="card-header">
+            <h3>💻 Lua 代码实验室</h3>
+
+            <div class="editor-actions">
+              <button class="button" id="resetCodeButton">
+                重置
+              </button>
+
+              <button class="button" id="hintButton">
+                提示
+              </button>
+
+              <button class="button" id="solutionButton">
+                参考答案
+              </button>
+
+              <button class="button primary" id="runButton">
+                ▶ 运行
+              </button>
+            </div>
+          </div>
+
+          <div class="editor-wrapper">
+            <div class="editor-label">
+              <span>main.lua</span>
+              <span>Ctrl / ⌘ + Enter 运行</span>
+            </div>
+
+            <textarea
+              id="codeEditor"
+              spellcheck="false"
+              aria-label="Lua 代码编辑器"
+            ></textarea>
+          </div>
+
+          <div class="card-header">
+            <h3>终端输出</h3>
+            <button class="button" id="clearOutputButton">
+              清空
+            </button>
+          </div>
+
+          <pre class="output-area muted" id="outputArea">等待运行代码……</pre>
+          <div class="run-status" id="runStatus">
+            Lua 运行环境尚未启动
+          </div>
+        </section>
+      </div>
+
+      <div class="lesson-navigation">
+        <button class="button nav-button" id="previousButton">
+          ← 上一课
+        </button>
+
+        <button class="button primary nav-button" id="nextButton">
+          下一课 →
+        </button>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const lessons = [
+      {
+        title: "你好，Lua！",
+        description:
+          "认识 Lua 程序的基本结构，学习如何输出文字以及编写注释。",
+        theory: `
+          <p>
+            Lua 是一种轻量级、可嵌入的脚本语言，经常用于游戏开发、
+            嵌入式系统、配置文件和自动化脚本。
+          </p>
+          <p>
+            使用 <code>print()</code> 可以向终端输出内容：
+          </p>
+          <ul>
+            <li><code>print("Hello")</code> 输出字符串</li>
+            <li><code>-- 注释</code> 表示单行注释</li>
+            <li><code>--[[ 注释 ]]</code> 表示多行注释</li>
+          </ul>
+        `,
+        challenge:
+          "使用 <code>print()</code> 分两行输出 <code>Hello, Lua!</code> 和 <code>开始学习</code>。",
+        expected: "Hello, Lua!\n开始学习",
+        starter: `-- 欢迎来到 Lua 学习实验室
+-- 请补全下面的代码
+
+print("Hello, Lua!")
+`,
+        solution: `print("Hello, Lua!")
+print("开始学习")`,
+        hint:
+          '再写一个 print 语句，例如：<code>print("开始学习")</code>。',
+        quiz: {
+          question: "Lua 中用于输出内容的函数是？",
+          options: ["echo()", "console.log()", "print()", "writeLine()"],
+          answer: 2,
+          explanation: "Lua 使用 print() 函数输出内容。"
+        }
+      },
+
+      {
+        title: "变量与数据类型",
+        description:
+          "学习变量、字符串、数字、布尔值和 nil，理解 Lua 的动态类型特性。",
+        theory: `
+          <p>
+            Lua 是动态类型语言，变量不需要提前声明类型：
+          </p>
+          <ul>
+            <li><code>name = "Lua"</code>：字符串</li>
+            <li><code>age = 30</code>：数字</li>
+            <li><code>active = true</code>：布尔值</li>
+            <li><code>value = nil</code>：空值</li>
+          </ul>
+          <p>
+            使用 <code>local</code> 可以定义局部变量。
+            字符串连接运算符是两个点：<code>..</code>。
+          </p>
+          <p>
+            <code>type(value)</code> 可以获取一个值的数据类型。
+          </p>
+        `,
+        challenge:
+          "创建局部变量 <code>name</code>，值为 <code>Lua</code>；创建变量 <code>version</code>，值为 <code>5.3</code>，然后输出 <code>Lua 5.3</code>。",
+        expected: "Lua 5.3",
+        starter: `-- 定义两个局部变量
+local name = "Lua"
+local version = 5.3
+
+-- 使用 .. 连接字符串并输出
+`,
+        solution: `local name = "Lua"
+local version = 5.3
+
+print(name .. " " .. version)`,
+        hint:
+          "Lua 使用两个点连接字符串：<code>name .. \" \" .. version</code>。",
+        quiz: {
+          question: "下面哪个关键字用于定义局部变量？",
+          options: ["var", "let", "local", "private"],
+          answer: 2,
+          explanation: "Lua 使用 local 关键字定义局部变量。"
+        }
+      },
+
+      {
+        title: "条件判断",
+        description:
+          "使用 if、elseif 和 else，让程序根据不同条件执行不同代码。",
+        theory: `
+          <p>Lua 的条件判断结构如下：</p>
+          <pre><code>if 条件 then
+    -- 条件成立
+elseif 其他条件 then
+    -- 其他条件成立
+else
+    -- 所有条件都不成立
+end</code></pre>
+          <p>
+            常用比较运算符包括：
+            <code>==</code>、<code>~=</code>、<code>&gt;</code>、
+            <code>&lt;</code>、<code>&gt;=</code> 和 <code>&lt;=</code>。
+          </p>
+          <p>
+            注意：Lua 中“不等于”使用 <code>~=</code>。
+          </p>
+        `,
+        challenge:
+          "根据变量 <code>score</code> 判断等级：大于等于 90 输出 <code>优秀</code>；大于等于 60 输出 <code>及格</code>；否则输出 <code>需要努力</code>。",
+        expected: "优秀",
+        starter: `local score = 95
+
+-- 在这里编写条件判断
+if score >= 90 then
+    print("优秀")
+end
+`,
+        solution: `local score = 95
+
+if score >= 90 then
+    print("优秀")
+elseif score >= 60 then
+    print("及格")
+else
+    print("需要努力")
+end`,
+        hint:
+          "按照从高分到低分的顺序判断，并且不要忘记最后的 <code>end</code>。",
+        quiz: {
+          question: "Lua 中表示“不等于”的运算符是？",
+          options: ["!=", "<>", "~=", "not="],
+          answer: 2,
+          explanation: "Lua 使用 ~= 表示两个值不相等。"
+        }
+      },
+
+      {
+        title: "循环结构",
+        description:
+          "学习 for 和 while 循环，使用循环重复执行代码。",
+        theory: `
+          <p>数字型 <code>for</code> 循环：</p>
+          <pre><code>for i = 1, 5 do
+    print(i)
+end</code></pre>
+          <p>
+            上面的循环会依次输出 1 到 5。还可以添加步长：
+            <code>for i = 10, 2, -2 do</code>。
+          </p>
+          <p><code>while</code> 循环会在条件成立时持续执行：</p>
+          <pre><code>while condition do
+    -- 循环体
+end</code></pre>
+        `,
+        challenge:
+          "使用 <code>for</code> 循环计算 1 到 5 的和，最后输出结果。",
+        expected: "15",
+        starter: `local total = 0
+
+-- 使用循环累加 1 到 5
+for i = 1, 5 do
+    -- 在这里累加
+end
+
+print(total)
+`,
+        solution: `local total = 0
+
+for i = 1, 5 do
+    total = total + i
+end
+
+print(total)`,
+        hint:
+          "在循环中执行 <code>total = total + i</code>。",
+        quiz: {
+          question: "数字型 for 循环结束时必须使用哪个关键字？",
+          options: ["stop", "done", "end", "break"],
+          answer: 2,
+          explanation: "Lua 使用 end 结束 for、while、if 和函数代码块。"
+        }
+      },
+
+      {
+        title: "函数",
+        description:
+          "通过函数封装可复用逻辑，学习参数、返回值和局部函数。",
+        theory: `
+          <p>函数可以把一段逻辑封装起来：</p>
+          <pre><code>local function add(a, b)
+    return a + b
+end
+
+local result = add(2, 3)</code></pre>
+          <p>
+            <code>a</code> 和 <code>b</code> 是参数，
+            <code>return</code> 用于返回结果。
+          </p>
+          <p>
+            Lua 函数可以返回多个值，例如：
+            <code>return min, max</code>。
+          </p>
+        `,
+        challenge:
+          "编写函数 <code>square(number)</code>，返回参数的平方；调用它并输出 <code>7</code> 的平方。",
+        expected: "49",
+        starter: `-- 定义 square 函数
+local function square(number)
+    -- 返回 number 的平方
+end
+
+print(square(7))
+`,
+        solution: `local function square(number)
+    return number * number
+end
+
+print(square(7))`,
+        hint:
+          "平方就是一个数乘以它自己：<code>number * number</code>。",
+        quiz: {
+          question: "函数使用哪个关键字返回结果？",
+          options: ["result", "yield", "send", "return"],
+          answer: 3,
+          explanation: "Lua 使用 return 返回一个或多个结果。"
+        }
+      },
+
+      {
+        title: "Table 表",
+        description:
+          "掌握 Lua 最重要的数据结构 table，用它表示数组和对象。",
+        theory: `
+          <p>
+            Table 是 Lua 中最核心的数据结构，可以同时充当数组、
+            字典和对象。
+          </p>
+          <pre><code>local fruits = {"苹果", "香蕉", "橙子"}
+print(fruits[1])
+
+local user = {
+    name = "小明",
+    age = 20
+}
+print(user.name)</code></pre>
+          <p>
+            Lua 数组的默认下标从 <code>1</code> 开始，而不是从 0 开始。
+          </p>
+          <p>
+            使用 <code>ipairs()</code> 遍历数组，
+            使用 <code>pairs()</code> 遍历键值对。
+          </p>
+        `,
+        challenge:
+          "创建一个包含 3、5、7 的数组，使用 <code>ipairs()</code> 遍历并求和，最后输出结果。",
+        expected: "15",
+        starter: `local numbers = {3, 5, 7}
+local total = 0
+
+-- 使用 ipairs 遍历数组
+for index, value in ipairs(numbers) do
+    -- 累加 value
+end
+
+print(total)
+`,
+        solution: `local numbers = {3, 5, 7}
+local total = 0
+
+for index, value in ipairs(numbers) do
+    total = total + value
+end
+
+print(total)`,
+        hint:
+          "循环中每一个数组元素保存在 <code>value</code> 变量里。",
+        quiz: {
+          question: "Lua 数组的默认起始下标是？",
+          options: ["-1", "0", "1", "取决于浏览器"],
+          answer: 2,
+          explanation: "Lua 的数组习惯从下标 1 开始。"
+        }
+      },
+
+      {
+        title: "字符串处理",
+        description:
+          "学习字符串长度、查找、替换、格式化以及常用字符串函数。",
+        theory: `
+          <p>Lua 提供了丰富的字符串处理函数：</p>
+          <ul>
+            <li><code>#text</code>：获取字符串长度</li>
+            <li><code>string.upper(text)</code>：转换为大写</li>
+            <li><code>string.lower(text)</code>：转换为小写</li>
+            <li><code>string.sub(text, 1, 3)</code>：截取字符串</li>
+            <li><code>string.format()</code>：格式化字符串</li>
+          </ul>
+          <p>例如：</p>
+          <pre><code>local name = "Lua"
+print(string.upper(name))</code></pre>
+        `,
+        challenge:
+          "使用 <code>string.format()</code> 输出：<code>名字: Lua, 分数: 100</code>。",
+        expected: "名字: Lua, 分数: 100",
+        starter: `local name = "Lua"
+local score = 100
+
+-- 使用 %s 和 %d 格式化字符串
+local message = ""
+
+print(message)
+`,
+        solution: `local name = "Lua"
+local score = 100
+
+local message = string.format(
+    "名字: %s, 分数: %d",
+    name,
+    score
+)
+
+print(message)`,
+        hint:
+          '调用方式：<code>string.format("名字: %s, 分数: %d", name, score)</code>。',
+        quiz: {
+          question: "哪个函数可以把字符串转换成大写？",
+          options: [
+            "string.big()",
+            "string.upper()",
+            "string.capitalize()",
+            "string.up()"
+          ],
+          answer: 1,
+          explanation: "string.upper() 用于将字符串转换成大写。"
+        }
+      },
+
+      {
+        title: "综合挑战：角色系统",
+        description:
+          "综合运用 table、函数、条件判断和循环，完成一个简单的角色数据统计程序。",
+        theory: `
+          <p>
+            现在把前面的知识组合起来。我们会使用 table 保存多个角色，
+            使用函数计算角色的战斗力。
+          </p>
+          <p>战斗力计算规则：</p>
+          <pre><code>战斗力 = 等级 * 10 + 攻击力</code></pre>
+          <p>
+            使用 <code>ipairs()</code> 遍历角色数组，
+            调用函数计算每个角色的战斗力。
+          </p>
+        `,
+        challenge:
+          "补全 <code>power()</code> 函数和循环，使程序依次输出 <code>剑士: 140</code>、<code>法师: 150</code>。",
+        expected: "剑士: 140\n法师: 150",
+        starter: `local players = {
+    {
+        name = "剑士",
+        level = 10,
+        attack = 40
+    },
+    {
+        name = "法师",
+        level = 12,
+        attack = 30
+    }
+}
+
+local function power(player)
+    -- 战斗力 = 等级 * 10 + 攻击力
+end
+
+for _, player in ipairs(players) do
+    -- 输出“角色名: 战斗力”
+end
+`,
+        solution: `local players = {
+    {
+        name = "剑士",
+        level = 10,
+        attack = 40
+    },
+    {
+        name = "法师",
+        level = 12,
+        attack = 30
+    }
+}
+
+local function power(player)
+    return player.level * 10 + player.attack
+end
+
+for _, player in ipairs(players) do
+    print(player.name .. ": " .. power(player))
+end`,
+        hint:
+          "先在函数中返回 <code>player.level * 10 + player.attack</code>，再用两个点连接角色名和战斗力。",
+        quiz: {
+          question: "遍历数组时，更适合使用哪个函数？",
+          options: ["ipairs()", "require()", "tonumber()", "collectgarbage()"],
+          answer: 0,
+          explanation: "对于连续整数下标的数组，通常使用 ipairs() 遍历。"
+        }
+      }
+    ];
+
+    const state = {
+      currentLesson: 0,
+      completed: new Set(),
+      quizCompleted: new Set(),
+      worker: null,
+      runTimer: null
+    };
+
+    const elements = {
+      lessonList: document.getElementById("lessonList"),
+      progressText: document.getElementById("progressText"),
+      progressValue: document.getElementById("progressValue"),
+      lessonTag: document.getElementById("lessonTag"),
+      lessonTitle: document.getElementById("lessonTitle"),
+      lessonDescription: document.getElementById("lessonDescription"),
+      lessonTheory: document.getElementById("lessonTheory"),
+      lessonChallenge: document.getElementById("lessonChallenge"),
+      expectedOutput: document.getElementById("expectedOutput"),
+      hintBox: document.getElementById("hintBox"),
+      codeEditor: document.getElementById("codeEditor"),
+      outputArea: document.getElementById("outputArea"),
+      runStatus: document.getElementById("runStatus"),
+      runButton: document.getElementById("runButton"),
+      resetCodeButton: document.getElementById("resetCodeButton"),
+      clearOutputButton: document.getElementById("clearOutputButton"),
+      hintButton: document.getElementById("hintButton"),
+      solutionButton: document.getElementById("solutionButton"),
+      quizQuestion: document.getElementById("quizQuestion"),
+      quizOptions: document.getElementById("quizOptions"),
+      quizFeedback: document.getElementById("quizFeedback"),
+      previousButton: document.getElementById("previousButton"),
+      nextButton: document.getElementById("nextButton"),
+      resetProgressButton: document.getElementById(
+        "resetProgressButton"
+      ),
+      toast: document.getElementById("toast")
+    };
+
+    function loadProgress() {
+      try {
+        const saved = JSON.parse(
+          localStorage.getItem("lua-learning-progress") || "{}"
+        );
+
+        if (Array.isArray(saved.completed)) {
+          state.completed = new Set(saved.completed);
+        }
+
+        if (Array.isArray(saved.quizCompleted)) {
+          state.quizCompleted = new Set(saved.quizCompleted);
+        }
+
+        if (
+          Number.isInteger(saved.currentLesson) &&
+          saved.currentLesson >= 0 &&
+          saved.currentLesson < lessons.length
+        ) {
+          state.currentLesson = saved.currentLesson;
+        }
+      } catch (error) {
+        console.warn("读取学习进度失败：", error);
+      }
+    }
+
+    function saveProgress() {
+      const data = {
+        currentLesson: state.currentLesson,
+        completed: [...state.completed],
+        quizCompleted: [...state.quizCompleted]
+      };
+
+      localStorage.setItem(
+        "lua-learning-progress",
+        JSON.stringify(data)
+      );
+    }
+
+    function renderLessonList() {
+      elements.lessonList.innerHTML = "";
+
+      lessons.forEach((lesson, index) => {
+        const button = document.createElement("button");
+        button.className = "lesson-button";
+
+        if (index === state.currentLesson) {
+          button.classList.add("active");
+        }
+
+        const completed = state.completed.has(index);
+
+        button.innerHTML = `
+          <span class="lesson-number">${index + 1}</span>
+          <span class="lesson-title-small">${lesson.title}</span>
+          <span class="lesson-check">${completed ? "✓" : ""}</span>
+        `;
+
+        button.addEventListener("click", () => {
+          openLesson(index);
+        });
+
+        elements.lessonList.appendChild(button);
+      });
+    }
+
+    function renderProgress() {
+      const completedCount = state.completed.size;
+      const percent = Math.round(
+        (completedCount / lessons.length) * 100
+      );
+
+      elements.progressText.textContent =
+        `${completedCount} / ${lessons.length}`;
+
+      elements.progressValue.style.width = `${percent}%`;
+    }
+
+    function renderQuiz(lesson, lessonIndex) {
+      const quiz = lesson.quiz;
+
+      elements.quizQuestion.textContent = quiz.question;
+      elements.quizOptions.innerHTML = "";
+      elements.quizFeedback.textContent = "";
+
+      quiz.options.forEach((option, optionIndex) => {
+        const button = document.createElement("button");
+        button.className = "quiz-option";
+        button.textContent = `${String.fromCharCode(65 + optionIndex)}. ${option}`;
+
+        button.addEventListener("click", () => {
+          const allOptions = [
+            ...elements.quizOptions.querySelectorAll(".quiz-option")
+          ];
+
+          allOptions.forEach((item) => {
+            item.disabled = true;
+          });
+
+          if (optionIndex === quiz.answer) {
+            button.classList.add("correct");
+            elements.quizFeedback.textContent =
+              `回答正确！${quiz.explanation}`;
+
+            state.quizCompleted.add(lessonIndex);
+            saveProgress();
+            showToast("选择题回答正确！", "success");
+          } else {
+            button.classList.add("wrong");
+            allOptions[quiz.answer].classList.add("correct");
+            elements.quizFeedback.textContent =
+              `回答错误。${quiz.explanation}`;
+          }
+        });
+
+        elements.quizOptions.appendChild(button);
+      });
+
+      if (state.quizCompleted.has(lessonIndex)) {
+        const correctOption =
+          elements.quizOptions.children[quiz.answer];
+
+        if (correctOption) {
+          correctOption.classList.add("correct");
+        }
+
+        elements.quizFeedback.textContent =
+          `你已经完成本题。${quiz.explanation}`;
+      }
+    }
+
+    function openLesson(index) {
+      if (index < 0 || index >= lessons.length) {
+        return;
+      }
+
+      terminateWorker();
+
+      state.currentLesson = index;
+      const lesson = lessons[index];
+
+      elements.lessonTag.textContent =
+        `第 ${index + 1} 课 · ${index + 1}/${lessons.length}`;
+
+      elements.lessonTitle.textContent = lesson.title;
+      elements.lessonDescription.textContent = lesson.description;
+      elements.lessonTheory.innerHTML = lesson.theory;
+      elements.lessonChallenge.innerHTML =
+        `<strong>你的任务</strong>${lesson.challenge}`;
+
+      elements.expectedOutput.textContent = lesson.expected;
+      elements.hintBox.innerHTML = `<strong>提示：</strong> ${lesson.hint}`;
+      elements.hintBox.classList.remove("visible");
+
+      elements.codeEditor.value = lesson.starter;
+      setOutput("等待运行代码……", "muted");
+      setStatus("编辑代码后，点击“运行”进行测试。");
+
+      elements.previousButton.disabled = index === 0;
+      elements.nextButton.disabled = index === lessons.length - 1;
+
+      elements.nextButton.textContent =
+        index === lessons.length - 1
+          ? "已到最后一课"
+          : "下一课 →";
+
+      renderLessonList();
+      renderProgress();
+      renderQuiz(lesson, index);
+      saveProgress();
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+      });
+    }
+
+    function normalizeOutput(value) {
+      return String(value)
+        .replace(/\r\n/g, "\n")
+        .trim();
+    }
+
+    function setOutput(content, type = "") {
+      elements.outputArea.textContent = content;
+      elements.outputArea.className = "output-area";
+
+      if (type) {
+        elements.outputArea.classList.add(type);
+      }
+    }
+
+    function setStatus(message, type = "") {
+      elements.runStatus.textContent = message;
+      elements.runStatus.className = "run-status";
+
+      if (type) {
+        elements.runStatus.classList.add(type);
+      }
+    }
+
+    function setRunning(running) {
+      elements.runButton.disabled = running;
+      elements.runButton.textContent =
+        running ? "运行中……" : "▶ 运行";
+    }
+
+    function terminateWorker() {
+      if (state.runTimer) {
+        clearTimeout(state.runTimer);
+        state.runTimer = null;
+      }
+
+      if (state.worker) {
+        state.worker.terminate();
+        state.worker = null;
+      }
+
+      setRunning(false);
+    }
+
+    function createLuaWorker() {
+      /*
+       * 在 Web Worker 中运行 Lua。
+       * 这样遇到 while true do 等死循环时，可以终止 Worker，
+       * 避免整个页面失去响应。
+       */
+      const workerSource = `
+        self.window = self;
+
+        self.onmessage = function(event) {
+          var code = event.data.code;
+          var output = [];
+
+          try {
+            importScripts(
+              "https://cdn.jsdelivr.net/npm/fengari-web@0.1.4/dist/fengari-web.js"
+            );
+
+            var lua = self.fengari.lua;
+            var lauxlib = self.fengari.lauxlib;
+            var lualib = self.fengari.lualib;
+            var toLuaString = self.fengari.to_luastring;
+            var toJsString = self.fengari.to_jsstring;
+
+            var L = lauxlib.luaL_newstate();
+            lualib.luaL_openlibs(L);
+
+            lua.lua_pushcfunction(L, function(luaState) {
+              var count = lua.lua_gettop(luaState);
+              var values = [];
+
+              for (var i = 1; i <= count; i++) {
+                lauxlib.luaL_tolstring(luaState, i);
+
+                var value = lua.lua_tostring(luaState, -1);
+                values.push(toJsString(value));
+
+                lua.lua_pop(luaState, 1);
+              }
+
+              output.push(values.join("\\t"));
+              return 0;
+            });
+
+            lua.lua_setglobal(L, toLuaString("print"));
+
+            var loadStatus = lauxlib.luaL_loadstring(
+              L,
+              toLuaString(code)
+            );
+
+            if (loadStatus !== lua.LUA_OK) {
+              var syntaxMessage = toJsString(
+                lua.lua_tostring(L, -1)
+              );
+
+              throw new Error(syntaxMessage);
+            }
+
+            var runStatus = lua.lua_pcall(
+              L,
+              0,
+              lua.LUA_MULTRET,
+              0
+            );
+
+            if (runStatus !== lua.LUA_OK) {
+              var runtimeMessage = toJsString(
+                lua.lua_tostring(L, -1)
+              );
+
+              throw new Error(runtimeMessage);
+            }
+
+            self.postMessage({
+              ok: true,
+              output: output.join("\\n")
+            });
+          } catch (error) {
+            self.postMessage({
+              ok: false,
+              error: error && error.message
+                ? error.message
+                : String(error)
+            });
+          }
+        };
+      `;
+
+      const blob = new Blob(
+        [workerSource],
+        { type: "application/javascript" }
+      );
+
+      return new Worker(URL.createObjectURL(blob));
+    }
+
+    function runCode() {
+      const code = elements.codeEditor.value.trim();
+
+      if (!code) {
+        setOutput("请先输入 Lua 代码。", "error");
+        setStatus("没有可运行的代码。", "error");
+        return;
+      }
+
+      terminateWorker();
+
+      setRunning(true);
+      setOutput("正在加载 Lua 运行环境……", "muted");
+      setStatus("程序正在运行，最长允许 3 秒。");
+
+      let worker;
+
+      try {
+        worker = createLuaWorker();
+        state.worker = worker;
+      } catch (error) {
+        setRunning(false);
+        setOutput(
+          `无法创建 Lua 运行环境：\n${error.message}`,
+          "error"
+        );
+        setStatus("运行环境创建失败。", "error");
+        return;
+      }
+
+      const startedAt = performance.now();
+
+      worker.onmessage = function(event) {
+        const elapsed = Math.round(performance.now() - startedAt);
+        const result = event.data;
+
+        if (state.runTimer) {
+          clearTimeout(state.runTimer);
+          state.runTimer = null;
+        }
+
+        worker.terminate();
+
+        if (state.worker === worker) {
+          state.worker = null;
+        }
+
+        setRunning(false);
+
+        if (!result.ok) {
+          setOutput(
+            `Lua 错误：\n${result.error}`,
+            "error"
+          );
+
+          setStatus(
+            `运行失败 · ${elapsed} ms`,
+            "error"
+          );
+
+          return;
+        }
+
+        const actualOutput = normalizeOutput(result.output);
+        const lesson = lessons[state.currentLesson];
+        const expected = normalizeOutput(lesson.expected);
+
+        setOutput(
+          actualOutput || "程序运行完成，但没有产生任何输出。",
+          actualOutput ? "" : "muted"
+        );
+
+        if (actualOutput === expected) {
+          const firstCompletion =
+            !state.completed.has(state.currentLesson);
+
+          state.completed.add(state.currentLesson);
+          saveProgress();
+          renderLessonList();
+          renderProgress();
+
+          setStatus(
+            `✓ 挑战通过 · ${elapsed} ms`,
+            "success"
+          );
+
+          showToast(
+            firstCompletion
+              ? "太棒了，本课挑战已完成！"
+              : "输出正确，挑战通过！",
+            "success"
+          );
+        } else {
+          setStatus(
+            `程序运行成功，但输出与目标不一致 · ${elapsed} ms`
+          );
+
+          showToast(
+            "代码可以运行，但输出还没有达到练习目标。",
+            "error"
+          );
+        }
+      };
+
+      worker.onerror = function(event) {
+        if (state.runTimer) {
+          clearTimeout(state.runTimer);
+          state.runTimer = null;
+        }
+
+        worker.terminate();
+
+        if (state.worker === worker) {
+          state.worker = null;
+        }
+
+        setRunning(false);
+
+        setOutput(
+          `运行环境错误：\n${event.message}`,
+          "error"
+        );
+
+        setStatus(
+          "Lua 运行环境加载失败，请检查网络连接。",
+          "error"
+        );
+      };
+
+      state.runTimer = setTimeout(() => {
+        worker.terminate();
+
+        if (state.worker === worker) {
+          state.worker = null;
+        }
+
+        state.runTimer = null;
+        setRunning(false);
+
+        setOutput(
+          "程序运行超过 3 秒，已强制停止。\n请检查是否存在无限循环。",
+          "error"
+        );
+
+        setStatus("运行超时。", "error");
+      }, 3000);
+
+      worker.postMessage({ code });
+    }
+
+    let toastTimer = null;
+
+    function showToast(message, type = "") {
+      clearTimeout(toastTimer);
+
+      elements.toast.textContent = message;
+      elements.toast.className = "toast";
+
+      if (type) {
+        elements.toast.classList.add(type);
+      }
+
+      requestAnimationFrame(() => {
+        elements.toast.classList.add("show");
+      });
+
+      toastTimer = setTimeout(() => {
+        elements.toast.classList.remove("show");
+      }, 2600);
+    }
+
+    elements.runButton.addEventListener("click", runCode);
+
+    elements.resetCodeButton.addEventListener("click", () => {
+      const lesson = lessons[state.currentLesson];
+
+      elements.codeEditor.value = lesson.starter;
+      elements.hintBox.classList.remove("visible");
+
+      setOutput("代码已经重置，等待运行……", "muted");
+      setStatus("已恢复为本课初始代码。");
+      elements.codeEditor.focus();
+    });
+
+    elements.clearOutputButton.addEventListener("click", () => {
+      setOutput("输出已清空。", "muted");
+      setStatus("等待运行代码。");
+    });
+
+    elements.hintButton.addEventListener("click", () => {
+      elements.hintBox.classList.toggle("visible");
+
+      if (elements.hintBox.classList.contains("visible")) {
+        elements.hintBox.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest"
+        });
+      }
+    });
+
+    elements.solutionButton.addEventListener("click", () => {
+      const confirmed = window.confirm(
+        "确定要查看参考答案吗？建议先自己尝试完成练习。"
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      const lesson = lessons[state.currentLesson];
+      elements.codeEditor.value = lesson.solution;
+      elements.codeEditor.focus();
+
+      setOutput(
+        "参考答案已填入编辑器，点击“运行”验证结果。",
+        "muted"
+      );
+
+      setStatus("已加载参考答案。");
+    });
+
+    elements.previousButton.addEventListener("click", () => {
+      openLesson(state.currentLesson - 1);
+    });
+
+    elements.nextButton.addEventListener("click", () => {
+      openLesson(state.currentLesson + 1);
+    });
+
+    elements.resetProgressButton.addEventListener("click", () => {
+      const confirmed = window.confirm(
+        "确定要清除全部学习进度吗？此操作无法撤销。"
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      state.completed.clear();
+      state.quizCompleted.clear();
+      state.currentLesson = 0;
+
+      localStorage.removeItem("lua-learning-progress");
+
+      openLesson(0);
+      showToast("学习进度已重置。");
+    });
+
+    elements.codeEditor.addEventListener("keydown", (event) => {
+      /*
+       * 在 textarea 中支持 Tab 缩进。
+       */
+      if (event.key === "Tab") {
+        event.preventDefault();
+
+        const textarea = elements.codeEditor;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+
+        textarea.value =
+          textarea.value.substring(0, start) +
+          "    " +
+          textarea.value.substring(end);
+
+        textarea.selectionStart =
+          textarea.selectionEnd = start + 4;
+
+        return;
+      }
+
+      /*
+       * Ctrl + Enter 或 Command + Enter 运行。
+       */
+      if (
+        event.key === "Enter" &&
+        (event.ctrlKey || event.metaKey)
+      ) {
+        event.preventDefault();
+        runCode();
+      }
+    });
+
+    window.addEventListener("beforeunload", () => {
+      terminateWorker();
+    });
+
+    loadProgress();
+    openLesson(state.currentLesson);
+  </script>
+<script src="progress-sync.js"></script>
+</body>
+</html>

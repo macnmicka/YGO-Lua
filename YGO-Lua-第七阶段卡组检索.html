@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="course-id" content="ygo-stage-07">
+<meta name="course-stage" content="7">
+<meta name="progress-key" content="ygo-learning:stage-07-search:v1">
+<meta name="progress-mode" content="records">
+<meta name="course-category" content="YGO Lua">
+<meta name="course-description" content="学习从卡组筛选并检索卡片的 YGO Lua 基础流程">
+<meta name="show-progress" content="true">
+<title>YGO Lua · 第七阶段：卡组检索</title>
+<style>
+:root{
+  --bg:#0a1020;--panel:#131e33;--panel2:#18263f;
+  --line:#2a3c5d;--text:#e6eeff;--muted:#a8b9d5;
+  --blue:#86a5ff;--green:#69e2b2;--yellow:#ffd782;--red:#ff9aa8;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:radial-gradient(ellipse at top right,#172750,transparent 50%),var(--bg);
+  color:var(--text);
+  font:15px/1.8 system-ui,"Microsoft YaHei",sans-serif;
+}
+button,input,textarea,select{font:inherit}
+button{
+  cursor:pointer;padding:9px 14px;
+  border:1px solid var(--line);border-radius:9px;
+  background:var(--panel2);color:var(--text);
+}
+button:hover{border-color:var(--blue)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{
+  outline:2px solid var(--blue);outline-offset:3px;
+}
+.primary{background:#486aca;border-color:#6485e6;color:white}
+.shell{display:grid;grid-template-columns:255px minmax(0,1fr);min-height:100vh}
+aside{
+  position:sticky;top:0;height:100vh;overflow:auto;padding:22px 16px;
+  border-right:1px solid var(--line);background:#0c1425;
+}
+.brand{font-size:21px;font-weight:800}
+.subtitle{color:var(--muted);font-size:12px}
+.progressBox{
+  margin:20px 0;padding:13px;background:var(--panel);
+  border:1px solid var(--line);border-radius:12px;
+}
+.progressTitle{display:flex;justify-content:space-between;font-size:13px}
+.progressTrack{
+  height:7px;background:#080d18;border-radius:10px;margin-top:10px;overflow:hidden;
+}
+.progressTrack div{
+  height:100%;background:linear-gradient(90deg,var(--blue),var(--green));
+  transition:width .3s;
+}
+nav{display:grid;gap:7px}
+nav button{
+  display:flex;align-items:center;gap:9px;text-align:left;
+  padding:10px;background:transparent;border-color:transparent;font-size:13px;
+}
+nav button.active{background:#22375e;border-color:#5d7fcc}
+nav .num{color:var(--muted);min-width:21px}
+nav .tick{margin-left:auto;color:var(--green)}
+main{min-width:0;width:100%;max-width:1400px;margin:0 auto;padding:30px}
+.hero{
+  padding:24px;border:1px solid var(--line);border-radius:17px;
+  background:linear-gradient(120deg,#1d3053,#132139);margin-bottom:20px;
+}
+.tag{color:var(--green);font-size:12px;font-weight:700;letter-spacing:.08em}
+h1{margin:8px 0;font-size:29px;line-height:1.4}
+h2{font-size:18px;margin:0 0 14px}
+h3{font-size:15px;margin:16px 0 8px}
+p{margin:9px 0}
+.muted{color:var(--muted)}
+.grid{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:20px;align-items:start;
+}
+.panel{
+  padding:20px;border:1px solid var(--line);background:var(--panel);
+  border-radius:14px;margin-bottom:20px;min-width:0;
+}
+.lessonText{color:#d0def5}
+.lessonText strong{color:white}
+code{
+  color:#a5edcf;background:#0b1526;padding:2px 5px;
+  border-radius:5px;font-family:Consolas,monospace;
+}
+pre{
+  background:#080f1d;color:#d6e5ff;border:1px solid #263958;
+  padding:15px;border-radius:10px;white-space:pre-wrap;
+  overflow-wrap:anywhere;font:14px/1.8 Consolas,monospace;
+}
+.note{
+  padding:12px 14px;border-left:3px solid var(--blue);
+  border-radius:0 8px 8px 0;background:#182943;
+  color:#c5d6f2;font-size:13px;margin:15px 0;
+}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+.visual{
+  min-height:170px;padding:18px;background:#0b1424;
+  border:1px dashed #395277;border-radius:12px;
+}
+.visualTitle{font-weight:700;color:var(--yellow);margin-bottom:12px}
+.object{
+  padding:13px;background:#182943;border:1px solid #3c567e;
+  border-radius:10px;margin-bottom:10px;
+}
+.object b{display:block;color:var(--blue);margin-bottom:5px}
+.fields{display:grid;grid-template-columns:auto 1fr;gap:5px 15px;font-size:13px}
+.fields span:nth-child(odd){color:var(--muted)}
+.stepCount{font-size:12px;color:var(--muted)}
+.caption{padding:12px 0 0;min-height:62px;color:#c8d9f7;font-size:14px}
+.option{width:100%;text-align:left;display:block;margin-top:9px}
+.option.good{border-color:var(--green);background:#173d34}
+.option.bad{border-color:var(--red);background:#412b3b}
+.feedback{min-height:30px;padding-top:12px;font-size:14px}
+.goodText{color:var(--green)}
+.badText{color:var(--red)}
+textarea,input[type=text],select{
+  padding:10px;color:#e6efff;background:#090f1d;
+  border:1px solid #3a5276;border-radius:9px;
+}
+textarea,input[type=text]{width:100%;font:14px/1.8 Consolas,monospace}
+textarea{min-height:290px;resize:vertical;tab-size:4}
+[hidden]{display:none!important}
+details{margin-top:13px}
+summary{cursor:pointer;color:var(--blue)}
+.footerNav{
+  display:flex;justify-content:space-between;align-items:center;
+  gap:14px;margin-bottom:25px;
+}
+.badge{color:var(--green);font-size:13px}
+.small{font-size:12px}
+.settings{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.cards{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+  gap:12px;margin-top:16px;
+}
+.labCard{
+  padding:15px;background:#0b1424;border:1px solid #3c567e;border-radius:12px;
+}
+.labCard.eligible{border-color:var(--green);background:#102c2b}
+.labCard.selected{outline:2px solid var(--yellow)}
+.labCard h3{margin-top:0;color:var(--blue)}
+.labCard label{display:block;font-size:13px;margin-top:8px}
+.labCard select{width:100%;padding:7px}
+.labCard .reason{font-size:12px;color:var(--muted);margin-top:10px}
+#storageNotice{font-size:12px;color:var(--yellow)}
+@media(max-width:1100px){.grid{grid-template-columns:1fr}}
+@media(max-width:700px){
+  .shell{display:block}
+  aside{position:static;height:auto;padding:14px}
+  nav{display:flex;overflow:auto}
+  nav button{min-width:185px}
+  .progressBox{margin:12px 0}
+  main{padding:15px}
+  h1{font-size:24px}
+  .hero,.panel{padding:17px}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside>
+  <div class="brand">✦ YGO Lua 学习室</div>
+  <div class="subtitle">先看懂，再动手，最后独立写卡</div>
+
+  <div class="progressBox">
+    <div class="progressTitle">
+      <span>第七阶段 · 卡组检索</span>
+      <strong id="progressText"></strong>
+    </div>
+    <div class="progressTrack"><div id="progressBar"></div></div>
+  </div>
+
+  <nav id="nav" aria-label="课程目录"></nav>
+
+  <details>
+    <summary>学习记录与备份</summary>
+    <p class="small muted">
+      本阶段使用固定课程 ID。导出文件只包含本阶段进度与练习草稿。
+    </p>
+    <div class="actions">
+      <button id="exportProgress">导出记录</button>
+      <button id="importProgress">导入记录</button>
+      <button id="clearProgress">清空本阶段</button>
+    </div>
+    <input id="importFile" type="file" accept=".json,application/json" hidden>
+  </details>
+  <p id="storageNotice" aria-live="polite"></p>
+</aside>
+
+<main>
+  <header class="hero">
+    <div class="tag" id="lessonTag"></div>
+    <h1 id="lessonTitle"></h1>
+    <div class="muted" id="lessonGoal"></div>
+  </header>
+
+  <div class="grid">
+    <div>
+      <section class="panel">
+        <h2>① 先理解一个小知识点</h2>
+        <div id="lessonText" class="lessonText"></div>
+        <pre id="example"></pre>
+        <div class="note" id="takeaway"></div>
+      </section>
+
+      <section class="panel">
+        <h2>② 点击观察</h2>
+        <p class="small muted">预设教学演示，不执行任意 Lua。</p>
+        <div class="visual" id="visual"></div>
+        <pre id="stepCode"></pre>
+        <div class="caption" id="stepCaption" aria-live="polite"></div>
+        <div class="actions">
+          <button id="previousStep">← 上一步</button>
+          <button id="nextStep" class="primary">观察下一步 →</button>
+        </div>
+        <div class="stepCount" id="stepCount"></div>
+      </section>
+    </div>
+
+    <div>
+      <section class="panel">
+        <h2>③ 确认你理解了</h2>
+        <p id="question"></p>
+        <div id="options"></div>
+        <div class="feedback" id="quizFeedback" aria-live="polite"></div>
+      </section>
+
+      <section class="panel">
+        <h2>④ 只写一点点</h2>
+        <p id="exercisePrompt"></p>
+        <pre id="exerciseTemplate"></pre>
+
+        <label for="answerInput" class="small muted" id="inputLabel">
+          填写空缺部分
+        </label>
+
+        <input id="answerInput" type="text" autocomplete="off" spellcheck="false">
+        <textarea id="codeInput" hidden spellcheck="false" aria-label="代码骨架练习"></textarea>
+
+        <div class="actions">
+          <button class="primary" id="checkAnswer">检查练习</button>
+          <button id="resetAnswer">重新填写</button>
+        </div>
+
+        <div class="feedback" id="exerciseFeedback" aria-live="polite"></div>
+
+        <details id="hintDetails">
+          <summary>给我一个提示</summary>
+          <p id="exerciseHint"></p>
+        </details>
+
+        <details id="solutionDetails">
+          <summary>查看参考答案</summary>
+          <pre id="exerciseSolution"></pre>
+          <p class="small muted">查看答案不会自动完成本课。</p>
+        </details>
+      </section>
+
+      <section class="panel">
+        <h2>本课完成条件</h2>
+        <div id="checklist"></div>
+        <p class="small muted">
+          练习使用受限结构检查，不会执行任意 Lua。
+        </p>
+      </section>
+    </div>
+  </div>
+
+  <div class="footerNav">
+    <button id="previousLesson">← 上一课</button>
+    <span id="lessonStatus" class="badge"></span>
+    <button id="nextLesson" class="primary">下一课 →</button>
+  </div>
+
+  <section class="panel">
+    <h2>⑤ 卡组检索实验台</h2>
+    <p>修改卡组卡片条件，观察filter、检索选择、加入手牌和公开的顺序。</p>
+    <div class="note">
+      教学模拟限定为：自己卡组中、可以加入手牌的战士族怪兽。
+      不模拟卡组不足、替代处理、免疫或真实引擎的Group实现。
+      此效果不取对象：发动时只检查有没有合法卡，处理时才选具体卡。
+    </div>
+
+    <div class="settings">
+      <label>场景操作
+        <select id="labMode">
+          <option value="inspect">只检查，不发动</option>
+          <option value="resolve">模拟发动并处理</option>
+        </select>
+      </label>
+      <label>检索卡片
+        <select id="labChoice"></select>
+      </label>
+      <button id="runLab" class="primary">运行场景</button>
+      <button id="resetLab">重置卡组</button>
+    </div>
+
+    <div id="labCards" class="cards"></div>
+
+    <h3>对应处理结构</h3>
+    <pre id="labCode"></pre>
+
+    <h3>场景结果</h3>
+    <div id="labResult" aria-live="polite"></div>
+
+    <details>
+      <summary>建议完成的实验</summary>
+      <ol>
+        <li>运行“只检查”，确认手牌和卡组都没变化。</li>
+        <li>选择“模拟发动并处理”，观察检索卡进入手牌。</li>
+        <li>把所有战士族设为“不能加入手牌”，再检查发动是否合法。</li>
+        <li>将目标改成龙族但保留战士族筛选，确认它不会进入候选。</li>
+      </ol>
+    </details>
+  </section>
+
+  <section class="panel">
+    <details>
+      <summary>随时可查：本阶段术语小字典</summary>
+      <div id="glossary"></div>
+    </details>
+  </section>
+
+  <section class="panel">
+    <h2>阶段进度</h2>
+    <p>
+      本阶段结束后，你会能读懂一张基础的非取对象检索魔法：
+      检查卡组有无合法卡，处理时从卡组选择，再加入手牌并公开。
+    </p>
+    <p class="muted">
+      后续还要学习Group遍历、多张卡处理、特殊加入手牌条件和完整引擎测试。
+    </p>
+  </section>
+</main>
+</div>
+
+<script>
+"use strict";
+
+const $ = window.$ = id => document.getElementById(id);
+
+const STAGE={
+  id:"stage-07-search",
+  startNumber:70
+};
+
+const searchAnswer=`function s.operation(e,tp,eg,ep,ev,re,r,rp)
+    local g=Duel.GetMatchingGroup(s.filter,tp,LOCATION_DECK,0,nil)
+    if g:GetCount()==0 then return end
+    Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_ATOHAND)
+    local sg=g:Select(tp,1,1,nil)
+    if Duel.SendtoHand(sg,nil,REASON_EFFECT)>0 then
+        Duel.ConfirmCards(1-tp,sg)
+    end
+end`;
+
+const finalScript=`local s,id=GetID()
+
+function s.initial_effect(c)
+    local e1=Effect.CreateEffect(c)
+    e1:SetCategory(CATEGORY_SEARCH+CATEGORY_TOHAND)
+    e1:SetType(EFFECT_TYPE_ACTIVATE)
+    e1:SetCode(EVENT_FREE_CHAIN)
+    e1:SetTarget(s.target)
+    e1:SetOperation(s.operation)
+    c:RegisterEffect(e1)
+end
+
+function s.filter(c)
+    return c:IsRace(RACE_WARRIOR) and c:IsAbleToHand()
+end
+
+function s.target(e,tp,eg,ep,ev,re,r,rp,chk)
+    if chk==0 then
+        return Duel.IsExistingMatchingCard(s.filter,tp,LOCATION_DECK,0,1,nil)
+    end
+    Duel.SetOperationInfo(0,CATEGORY_TOHAND,nil,1,tp,LOCATION_DECK)
+end
+
+${searchAnswer}`;
+
+const step=(code,caption,fields)=>({code,caption,fields});
+
+const lessons=[
+{
+  id:"search-location-review",
+  title:"检索从哪里找",
+  goal:"先分清卡片区域，以及检查阶段与处理阶段。",
+  text:`
+    <p>本阶段完成一张基础的卡组检索魔法：</p>
+    <p><strong>从自己的卡组选择1只战士族怪兽加入手牌，然后让对方确认。</strong></p>
+    <p>先只关注“从自己的卡组找”。filter、Group、加入手牌和公开会分开学习。</p>
+    <p>搜索卡组不等于搜索手牌，也不等于搜索场上。</p>
+    <p>本效果<strong>不取对象</strong>：发动时检查有没有合法卡；处理时再从卡组选择。</p>
+  `,
+  example:`发动检查：卡组中是否存在合法卡？
+
+效果处理：从卡组中选择1张，然后加入手牌。`,
+  takeaway:"先确定搜索区域。本阶段的区域是自己的主卡组。",
+  steps:[
+    step("-- 卡组里有符合条件的卡",
+      "这里暂时只看区域，还不判断卡片条件。",
+      [["搜索区域","自己的主卡组"],["发动时选卡","否"]]),
+    step("-- 发动时只检查是否存在",
+      "检查通过，但没有把某一张卡记为本次对象。",
+      [["合法卡数量","至少1"],["是否取对象","否"]]),
+    step("-- 处理时再选择并移动",
+      "具体选择发生在处理阶段。",
+      [["处理阶段","从卡组选择"],["目标卡","加入手牌"]])
+  ],
+  question:"本阶段的卡片什么时候从卡组中具体选择卡片？",
+  options:["初始化时","发动检查时","效果处理时"],
+  correct:2,
+  explanation:"这张教学卡不取对象，发动时只检查，具体选择在处理时进行。",
+  prompt:"填写本阶段要搜索的区域常量。",
+  template:"从自己的主卡组搜索：____",
+  answer:"LOCATION_DECK",
+  hint:"DECK表示卡组。"
+},
+{
+  id:"location-deck",
+  title:"LOCATION_DECK",
+  goal:"把已学过的区域参数用于卡组搜索。",
+  text:`
+    <p><code>LOCATION_DECK</code>表示卡组区域。</p>
+    <p>它和上阶段的<code>LOCATION_MZONE</code>、<code>LOCATION_HAND</code>一样，
+    是区域常量。</p>
+    <p>在<code>tp,LOCATION_DECK,0</code>中，第一个区域属于tp一侧，
+    第二个区域属于对手一侧；这里的0表示不搜索对手卡组。</p>
+    <p>区域常量只指定位置，不会自动寻找或移动卡片。</p>
+  `,
+  example:`-- 搜索tp自己的卡组
+tp,LOCATION_DECK,0`,
+  takeaway:"LOCATION_DECK指定搜索范围；它不执行检索。",
+  steps:[
+    step("tp=0，LOCATION_DECK,0",
+      "搜索玩家0的卡组。",
+      [["参照玩家","0"],["己方区域","卡组"],["对方区域","不搜索"]]),
+    step("tp=1，LOCATION_DECK,0",
+      "tp变成1后，仍然搜索发动玩家自己的卡组。",
+      [["参照玩家","1"],["己方区域","玩家1卡组"],["对方区域","不搜索"]]),
+    step("-- 区域只是范围",
+      "还需要筛选函数和查询函数。",
+      [["卡片是否已选","没有"],["是否已加入手牌","没有"]])
+  ],
+  question:"tp,LOCATION_DECK,0表示什么？",
+  options:["搜索玩家0的卡组","搜索tp一侧的卡组","搜索双方卡组"],
+  correct:1,
+  explanation:"第一个区域相对tp，最后的0表示不搜索另一侧。",
+  prompt:"填写自己卡组的区域常量。",
+  template:"tp, ____ ,0",
+  answer:"LOCATION_DECK",
+  hint:"这与之前的LOCATION_MZONE、LOCATION_HAND采用相同命名方式。"
+},
+{
+  id:"matching-group-deck",
+  title:"GetMatchingGroup 搜索卡组",
+  goal:"将已学过的查询函数改为卡组范围。",
+  text:`
+    <p>你已经用过<code>Duel.GetMatchingGroup</code>取得符合条件的卡片集合。</p>
+    <p>现在将范围改为tp自己的卡组：</p>
+    <p><code>Duel.GetMatchingGroup(s.filter,tp,LOCATION_DECK,0,nil)</code></p>
+    <p>其中nil表示本例没有额外指定要排除的卡片。</p>
+    <p>返回Group不会选择卡片，不会把卡片从卡组移走。</p>
+  `,
+  example:`local g=Duel.GetMatchingGroup(
+    s.filter,
+    tp,
+    LOCATION_DECK,
+    0,
+    nil
+)`,
+  takeaway:"查询得到候选集合，不等于选择、移动或公开卡片。",
+  steps:[
+    step("-- 搜索范围",
+      "只搜索发动玩家自己的卡组。",
+      [["己方范围","LOCATION_DECK"],["对方范围","0"]]),
+    step("s.filter",
+      "每张卡都会交给筛选函数判断。",
+      [["true","进入Group"],["false","排除"]]),
+    step("local g=Duel.GetMatchingGroup(...)",
+      "g是符合条件的Group，卡仍然留在卡组。",
+      [["返回值","Group"],["卡片移动","没有"]])
+  ],
+  question:"GetMatchingGroup返回Group后，卡片会自动加入手牌吗？",
+  options:["会","不会，只取得集合","只有Group有一张卡才会"],
+  correct:1,
+  explanation:"查询集合不执行移动；加入手牌要另外调用API。",
+  prompt:"补出自己的卡组区域。",
+  template:"local g=Duel.GetMatchingGroup(s.filter,tp,____,0,nil)",
+  answer:"LOCATION_DECK",
+  hint:"查询结构已经给好，只需填写卡组区域。"
+},
+{
+  id:"search-filter-review",
+  title:"检索 filter",
+  goal:"使用熟悉的IsRace与IsAbleToHand筛选候选卡。",
+  text:`
+    <p>本课检索条件是“战士族，并且可以加入手牌”。</p>
+    <p><code>IsRace(RACE_WARRIOR)</code>判断种族。</p>
+    <p><code>IsAbleToHand()</code>判断卡片当前能否加入手牌，
+    不是实际移动卡片。</p>
+    <p>两个条件都满足才保留，因此用<code>and</code>。</p>
+    <p>这段filter每次只判断一张候选卡。</p>
+  `,
+  example:`function s.filter(c)
+    return c:IsRace(RACE_WARRIOR)
+        and c:IsAbleToHand()
+end`,
+  takeaway:"filter先排除不符合卡文要求的卡，移动留给后面的处理。",
+  steps:[
+    step("检查种族",
+      "龙族候选返回false，立即排除。",
+      [["种族条件","不满足"],["filter结果","false"]]),
+    step("检查能否加入手牌",
+      "战士族但不能加入手牌，同样排除。",
+      [["种族条件","满足"],["移动条件","不满足"]]),
+    step("-- 两项都满足",
+      "只有战士族且可加入手牌的卡进入检索集合。",
+      [["种族条件","满足"],["移动条件","满足"],["结果","true"]])
+  ],
+  question:"为什么filter同时检查IsAbleToHand？",
+  options:["只要属于战士族就一定可以加入手牌","避免筛出当前不能加入手牌的卡","为了让卡片自动移动"],
+  correct:1,
+  explanation:"种族条件与能否加入手牌是两个不同条件。",
+  prompt:"补全filter中的可加入手牌条件。",
+  template:`function s.filter(c)
+    return c:IsRace(RACE_WARRIOR)
+        and ____
+end`,
+  answer:"c:IsAbleToHand()",
+  hint:"这是上一阶段学过的能力检查，不是SendtoHand。"
+},
+{
+  id:"empty-group",
+  title:"空 Group 与 GetCount",
+  goal:"安全处理卡组里没有合法检索卡的情况。",
+  text:`
+    <p>GetMatchingGroup在没有匹配卡时，仍然返回Group对象，
+    只是这个Group为空。</p>
+    <p><code>g:GetCount()</code>会返回0。</p>
+    <p>因此可以在选择前写：</p>
+    <p><code>if g:GetCount()==0 then return end</code></p>
+    <p>这是一项安全检查，避免在没有卡可选时继续选择。</p>
+  `,
+  example:`local g=Duel.GetMatchingGroup(s.filter,tp,LOCATION_DECK,0,nil)
+if g:GetCount()==0 then return end
+
+-- 有候选卡，才继续处理`,
+  takeaway:"空Group不是nil；用GetCount检查内部是否有卡。",
+  steps:[
+    step("查询没有匹配卡的卡组",
+      "返回一个空Group。",
+      [["g是否nil","否"],["GetCount()","0"]]),
+    step("if g:GetCount()==0 then return end",
+      "数量为0时，提前结束处理。",
+      [["继续选择","否"],["发生错误选择","避免"]]),
+    step("查询找到至少一张合法卡",
+      "数量大于0，可以继续选择。",
+      [["GetCount()","至少1"],["继续处理","是"]])
+  ],
+  question:"没有检索候选时，GetMatchingGroup通常返回什么？",
+  options:["nil","空Group","自动选一张"],
+  correct:1,
+  explanation:"返回空集合；用GetCount判断它是否有成员。",
+  prompt:"填写检查Group为空的数量方法。",
+  template:"if g:____()==0 then return end",
+  answer:"GetCount",
+  hint:"调用方式有冒号和括号；题目空格只要求方法名。"
+},
+{
+  id:"existing-matching-card",
+  title:"IsExistingMatchingCard",
+  goal:"检查卡组中是否存在合法卡，不选择具体卡片。",
+  text:`
+    <p>本效果不取对象，所以发动合法性检查使用
+    <code>Duel.IsExistingMatchingCard</code>。</p>
+    <p>它的前几个参数与熟悉的GetMatchingGroup相近：</p>
+    <p>① filter；② tp；③ tp一侧的区域；④对手一侧的区域。</p>
+    <p>后面的<code>1,nil</code>表示至少需要1张候选，
+    本例没有额外排除的卡片。</p>
+    <p>它返回布尔值：只回答“有没有”，不会返回Group，也不选卡。</p>
+  `,
+  example:`if chk==0 then
+    return Duel.IsExistingMatchingCard(
+        s.filter,tp,LOCATION_DECK,0,1,nil)
+end`,
+  takeaway:"不取对象的检索效果，检查有没有候选时使用MatchingCard检查。",
+  steps:[
+    step("-- 卡组有一张合法卡",
+      "检查返回true。",
+      [["返回","true"],["选中的卡","无"]]),
+    step("-- 卡组没有合法卡",
+      "检查返回false，不应发动。",
+      [["返回","false"],["卡片移动","没有"]]),
+    step("-- 再次检查",
+      "检查函数不会因为重复调用而选卡或移动卡片。",
+      [["手牌","不变"],["卡组","不变"]])
+  ],
+  question:"IsExistingMatchingCard返回什么？",
+  options:["匹配卡片的Group","布尔检查结果","已加入手牌的数量"],
+  correct:1,
+  explanation:"它检查是否存在足够数量的匹配卡，返回true或false。",
+  prompt:"填写至少存在一张卡组候选的检查函数名。",
+  template:"return Duel.____(s.filter,tp,LOCATION_DECK,0,1,nil)",
+  answer:"IsExistingMatchingCard",
+  hint:"名字中的MatchingCard表示检查符合条件的卡片是否存在。"
+},
+{
+  id:"group-select",
+  title:"Group:Select",
+  goal:"在处理阶段从候选Group中选择卡片。",
+  text:`
+    <p>检索效果不取对象时，通常在处理阶段重新获取卡组候选，
+    再通过Group的Select方法让玩家选择。</p>
+    <p><code>g:Select(tp,1,1,nil)</code>表示由tp从Group g中选择最少1张、最多1张，
+    本例没有额外排除对象。</p>
+    <p>冒号前的<code>g</code>是候选Group；第一个参数tp是选择玩家。</p>
+    <p>返回值仍然是Group，因此可保存到<code>sg</code>。</p>
+  `,
+  example:`local sg=g:Select(tp,1,1,nil)
+
+-- sg是只包含所选卡片的Group`,
+  takeaway:"GetMatchingGroup负责找候选；Group:Select负责从候选中选择。",
+  steps:[
+    step("-- g包含A、B",
+      "g是符合filter的候选集合。",
+      [["候选Group g","A、B"],["已选","无"]]),
+    step("local sg=g:Select(tp,1,1,nil)",
+      "玩家选择A，sg只包含A。",
+      [["选择玩家","tp"],["所选集合sg","A"]]),
+    step("-- 选择本身不移动卡片",
+      "A仍然在卡组，后面还要SendtoHand。",
+      [["A的位置","卡组"],["是否已加入手牌","否"]])
+  ],
+  question:"Group:Select完成后，卡片会自动离开卡组吗？",
+  options:["会，选择就会移动","不会，选择和移动是两个步骤","只有选择两张时会"],
+  correct:1,
+  explanation:"Select只产生所选Group；移动需要单独调用SendtoHand。",
+  prompt:"填写让tp从Group g中恰好选择一张的调用。",
+  template:"local sg=____",
+  answer:"g:Select(tp,1,1,nil)",
+  hint:"最少和最多都是1；本题使用冒号调用Group对象的方法。"
+},
+{
+  id:"send-to-hand",
+  title:"Duel.SendtoHand",
+  goal:"真正执行加入手牌的移动。",
+  text:`
+    <p><code>Duel.SendtoHand(sg,nil,REASON_EFFECT)</code>
+    请求把Group sg中的卡加入手牌。</p>
+    <p>第二个参数nil表示不指定单独的接收玩家，
+    本课的卡会回到其拥有者手牌。</p>
+    <p>第三个参数REASON_EFFECT表示由效果引起。</p>
+    <p>移动是否成功应参考函数返回值。本阶段只处理单张普通检索卡。</p>
+  `,
+  example:`local moved=Duel.SendtoHand(
+    sg,nil,REASON_EFFECT)
+
+if moved>0 then
+    -- 至少有一张成功移动
+end`,
+  takeaway:"Select产生所选集合；SendtoHand执行移动。",
+  steps:[
+    step("-- 选择完成",
+      "sg包含所选卡A，但A仍在卡组。",
+      [["A当前位置","卡组"],["sg","包含A"]]),
+    step("Duel.SendtoHand(sg,nil,REASON_EFFECT)",
+      "请求将所选卡加入其拥有者手牌。",
+      [["A当前位置","手牌"],["移动原因","效果"]]),
+    step("-- 检查返回值",
+      "返回成功移动的卡片数量；大于0才说明至少一张移动成功。",
+      [["返回值","本例为1"],["移动成功","是"]])
+  ],
+  question:"Select之后为什么还需要SendtoHand？",
+  options:["Select只选择卡片，不执行区域移动","SendtoHand只用于提示","Select已经加入手牌，SendtoHand负责抽卡"],
+  correct:0,
+  explanation:"选择与移动是不同步骤。",
+  prompt:"补全加入手牌的API名称。",
+  template:"local moved=Duel.____(sg,nil,REASON_EFFECT)",
+  answer:"SendtoHand",
+  hint:"方法名描述把所选卡发送到手牌。"
+},
+{
+  id:"confirm-cards",
+  title:"ConfirmCards：公开检索卡",
+  goal:"在成功加入手牌后，让对手确认这张卡。",
+  text:`
+    <p><code>Duel.ConfirmCards(player,group)</code>
+    向指定玩家公开Group里的卡片信息。</p>
+    <p>本课例子中，检索者tp把卡加入手牌后，
+    通常向对手<code>1-tp</code>确认所检索的卡。</p>
+    <p>它不会加入手牌，也不会改变卡片位置。</p>
+    <p>是否需要确认，以及在哪个条件下确认，应按卡片文本和脚本惯例处理。</p>
+  `,
+  example:`if Duel.SendtoHand(sg,nil,REASON_EFFECT)>0 then
+    Duel.ConfirmCards(1-tp,sg)
+end`,
+  takeaway:"ConfirmCards用于公开信息，不是移动API。",
+  steps:[
+    step("-- 加入手牌成功",
+      "本例移动返回值大于0。",
+      [["移动成功数","1"],["确认对象","所选卡Group"]]),
+    step("Duel.ConfirmCards(1-tp,sg)",
+      "向另一位玩家公开所选卡。",
+      [["接收确认者","1-tp"],["卡片位置","手牌"]]),
+    step("-- 如果移动失败",
+      "本例不进入成功分支，因此不执行确认。",
+      [["移动成功数","0"],["是否确认","否"]])
+  ],
+  question:"ConfirmCards(1-tp,sg)中的1-tp表示什么？",
+  options:["另一位玩家，也就是对手","卡片数量","第1张卡"],
+  correct:0,
+  explanation:"本课由发动者tp检索，因此1-tp是另一位玩家。",
+  prompt:"填写向对手确认卡片的玩家参数。",
+  template:"Duel.ConfirmCards(____,sg)",
+  answer:"1-tp",
+  hint:"tp是检索者；对手使用1-tp。"
+},
+{
+  id:"search-category-info",
+  title:"检索类别与处理信息",
+  goal:"分清搜索类别、加入手牌类别和实际移动。",
+  text:`
+    <p>检索效果常见设置：</p>
+    <p><code>CATEGORY_SEARCH</code>描述“检索”类别；
+    <code>CATEGORY_TOHAND</code>描述“加入手牌”处理。</p>
+    <p>两者使用Lua位运算<code>+</code>合并：
+    <code>CATEGORY_SEARCH+CATEGORY_TOHAND</code>。</p>
+    <p>正式target阶段还可登记：
+    <code>Duel.SetOperationInfo(0,CATEGORY_TOHAND,nil,1,tp,LOCATION_DECK)</code>。</p>
+    <p>类别与处理信息都不移动卡片。
+    真正加入手牌仍由SendtoHand完成。</p>
+  `,
+  example:`e1:SetCategory(CATEGORY_SEARCH+CATEGORY_TOHAND)
+
+-- 正式target阶段
+Duel.SetOperationInfo(
+    0,CATEGORY_TOHAND,nil,1,tp,LOCATION_DECK)`,
+  takeaway:"分类描述效果类别，OperationInfo描述预计处理，SendtoHand执行移动。",
+  steps:[
+    step("CATEGORY_SEARCH+CATEGORY_TOHAND",
+      "把检索和加入手牌类别同时标记在效果上。",
+      [["类别","检索 + 加入手牌"],["是否移动","否"]]),
+    step("Duel.SetOperationInfo(...)",
+      "向引擎登记预计从卡组加入1张手牌。",
+      [["预计卡数","1"],["卡片是否移动","否"]]),
+    step("Duel.SendtoHand(...)",
+      "实际请求移动所选卡。",
+      [["实际操作","加入手牌"],["执行API","SendtoHand"]])
+  ],
+  question:"哪一个API真正请求把卡片加入手牌？",
+  options:["SetCategory","SetOperationInfo","Duel.SendtoHand"],
+  correct:2,
+  explanation:"前两者提供类别或预计处理信息，SendtoHand执行移动。",
+  prompt:"填写“加入手牌”类别常量。",
+  template:"CATEGORY_SEARCH+CATEGORY_ ____",
+  answer:"TOHAND",
+  hint:"完整类别常量是CATEGORY_TOHAND。"
+},
+{
+  id:"integrated-search",
+  title:"综合：卡组检索魔法",
+  goal:"组合本阶段讲过的筛选、检查、选择、移动与公开。",
+  text:`
+    <p>最终效果：<strong>从自己的卡组选择1只战士族怪兽加入手牌，
+    然后让对手确认。</strong></p>
+    <p>发动时：用IsExistingMatchingCard检查卡组中是否有合法卡。</p>
+    <p>处理时：获取当前仍合法的Group；若为空就结束；
+    在Group中选择1张，尝试加入手牌；移动成功后公开给对手。</p>
+    <p>本例不取对象：发动时没有把具体某张卡登记成效果对象。</p>
+    <p>本课只组合前面已经逐项介绍过的API。</p>
+  `,
+  example:`检查：IsExistingMatchingCard
+处理：GetMatchingGroup
+空集合：GetCount
+选择：Group:Select
+移动：Duel.SendtoHand
+公开：Duel.ConfirmCards`,
+  takeaway:"先检查合法性，处理时重新取集合，再选择、移动，成功后公开。",
+  steps:[
+    step("target检查",
+      "检查自己卡组有没有可加入手牌的战士族。",
+      [["检查方式","返回true/false"],["是否指定一张卡","否"]]),
+    step("operation获取Group",
+      "处理时重新取得仍符合filter的卡片集合。",
+      [["候选","Group"],["空集合","提前结束"]]),
+    step("Select → SendtoHand → ConfirmCards",
+      "选择卡片，移动成功后再向对手公开。",
+      [["顺序","选择、移动、确认"]])
+  ],
+  question:"这张检索魔法在发动时是否取对象？",
+  options:["是，发动时固定某一张卡","否，发动时只检查，处理时才选择","所有检索效果都必须取对象"],
+  correct:1,
+  explanation:"本课设计为非取对象检索，具体卡片在处理时选择。",
+  prompt:"补全四处空缺。骨架采用本阶段介绍过的API。",
+  template:"受限结构检查，不执行任意Lua；通过不代表已在EDOPro实测。",
+  full:true,
+  starter:`local s,id=GetID()
+
+function s.initial_effect(c)
+    local e1=Effect.CreateEffect(c)
+    e1:SetCategory(CATEGORY_SEARCH+CATEGORY_TOHAND)
+    e1:SetType(EFFECT_TYPE_ACTIVATE)
+    e1:SetCode(EVENT_FREE_CHAIN)
+    e1:SetTarget(s.target)
+    e1:SetOperation(s.operation)
+    c:RegisterEffect(e1)
+end
+
+function s.filter(c)
+    return c:IsRace(RACE_WARRIOR) and c:IsAbleToHand()
+end
+
+function s.target(e,tp,eg,ep,ev,re,r,rp,chk)
+    if chk==0 then
+        return Duel.IsExistingMatchingCard(s.filter,tp,LOCATION_DECK,0,1,nil)
+    end
+    Duel.SetOperationInfo(0,CATEGORY_TOHAND,nil,1,tp,LOCATION_DECK)
+end
+
+function s.operation(e,tp,eg,ep,ev,re,r,rp)
+    local g=Duel.GetMatchingGroup(s.filter,tp,LOCATION_DECK,0,nil)
+    if g:GetCount()==0 then return end
+    Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_ATOHAND)
+    local sg=g:Select(tp,1,1,nil)
+    if Duel.SendtoHand(sg,nil,REASON_EFFECT)>0 then
+        Duel.ConfirmCards(1-tp,sg)
+    end
+end`,
+  answer:finalScript,
+  hint:"这里不要求背整段脚本。参考上一课的六步：检查、获取Group、判空、选择、移动、确认。"
+}
+];
+
+
+/* ---------- 通用课程渲染与进度 ---------- */
+const KEY="ygo-learning:stage-07-search:v1";
+const escHTML=value=>String(value).replace(/[&<>"']/g,c=>({
+  "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+})[c]);
+
+let state={
+  schemaVersion:1,
+  stageId:"stage-07-search",
+  currentLessonId:lessons[0].id,
+  records:{}
+};
+
+function emptyRecord(){
+  return {step:0,observed:false,quiz:false,exercise:false,draft:null};
+}
+
+function sanitizeState(raw){
+  if(!raw || raw.stageId!=="stage-07-search" || raw.schemaVersion!==1){
+    throw new Error("不是第七阶段兼容的学习记录。");
+  }
+
+  const clean={
+    schemaVersion:1,
+    stageId:"stage-07-search",
+    currentLessonId:lessons[0].id,
+    records:{}
+  };
+
+  if(lessons.some(l=>l.id===raw.currentLessonId)){
+    clean.currentLessonId=raw.currentLessonId;
+  }
+
+  for(const l of lessons){
+    const r=raw.records?.[l.id];
+    if(!r || typeof r!=="object")continue;
+
+    clean.records[l.id]={
+      step:Number.isInteger(r.step)&&r.step>=0&&r.step<l.steps.length?
+        r.step:0,
+      observed:r.observed===true,
+      quiz:r.quiz===true,
+      exercise:r.exercise===true,
+      draft:typeof r.draft==="string"?r.draft.slice(0,60000):null
+    };
+  }
+
+  return clean;
+}
+
+try{
+  const saved=localStorage.getItem(KEY);
+  if(saved)state=sanitizeState(JSON.parse(saved));
+}catch{
+  $("storageNotice").textContent="无法读取旧记录，已开启本次学习。";
+}
+
+function indexOfLesson(){
+  return lessons.findIndex(l=>l.id===state.currentLessonId);
+}
+function currentLesson(){
+  return lessons[indexOfLesson()];
+}
+function record(id=state.currentLessonId){
+  return state.records[id]||(state.records[id]=emptyRecord());
+}
+function save(){
+  try{
+    localStorage.setItem(KEY,JSON.stringify(state));
+  }catch{
+    $("storageNotice").textContent="浏览器无法保存，请使用导出功能备份。";
+  }
+}
+function completed(id){
+  const r=record(id);
+  return r.observed&&r.quiz&&r.exercise;
+}
+function renderNavigation(){
+  $("nav").replaceChildren();
+
+  lessons.forEach((l,i)=>{
+    const b=document.createElement("button");
+    b.className=l.id===state.currentLessonId?"active":"";
+    if(b.className)b.setAttribute("aria-current","step");
+
+    b.innerHTML=
+      `<span class="num">${70+i}</span>`+
+      `<span>${escHTML(l.title)}</span>`+
+      `<span class="tick">${completed(l.id)?"✓":""}</span>`;
+
+    b.onclick=()=>openLesson(l.id);
+    $("nav").appendChild(b);
+  });
+
+  const count=lessons.filter(l=>completed(l.id)).length;
+  $("progressText").textContent=`${count} / ${lessons.length}`;
+  $("progressBar").style.width=`${count/lessons.length*100}%`;
+
+  const r=record();
+  $("checklist").innerHTML=[
+    [r.observed,"看完全部观察步骤"],
+    [r.quiz,"答对理解题"],
+    [r.exercise,"完成本课小练习"]
+  ].map(([ok,text])=>
+    `<div class="${ok?"goodText":"muted"}">${ok?"✓":"○"} ${text}</div>`
+  ).join("");
+
+  $("lessonStatus").textContent=completed(state.currentLessonId)?
+    "✓ 本课已完成":"按自己的节奏慢慢来";
+}
+function renderStep(){
+  const l=currentLesson(),r=record(),s=l.steps[r.step];
+
+  $("visual").innerHTML=
+    `<div class="visualTitle">教学场景 · 第${r.step+1}步</div>`+
+    `<div class="object"><b>当前状态</b><div class="fields">${
+      s.fields.map(([k,v])=>
+        `<span>${escHTML(k)}</span><span>${escHTML(v)}</span>`
+      ).join("")
+    }</div></div>`;
+
+  $("stepCode").textContent=s.code;
+  $("stepCaption").textContent=s.caption;
+  $("stepCount").textContent=`观察进度：${r.step+1} / ${l.steps.length}`;
+  $("previousStep").disabled=r.step===0;
+  $("nextStep").disabled=r.step===l.steps.length-1;
+  $("nextStep").textContent=r.step===l.steps.length-1?
+    "观察完毕 ✓":"观察下一步 →";
+
+  if(r.step===l.steps.length-1)r.observed=true;
+  save();renderNavigation();
+}
+function renderQuiz(){
+  const l=currentLesson(),r=record();
+  $("question").textContent=l.question;
+  $("options").replaceChildren();
+
+  l.options.forEach((text,i)=>{
+    const b=document.createElement("button");
+    b.className="option"+(r.quiz&&i===l.correct?" good":"");
+    b.textContent=String.fromCharCode(65+i)+". "+text;
+
+    b.onclick=()=>{
+      document.querySelectorAll("#options .option").forEach(x=>
+        x.classList.remove("good","bad")
+      );
+
+      const ok=i===l.correct;
+      b.classList.add(ok?"good":"bad");
+      $("quizFeedback").className="feedback "+(ok?"goodText":"badText");
+      $("quizFeedback").textContent=ok?
+        "正确！"+l.explanation:
+        "还不对，回看知识点后可以继续选择，不扣分。";
+
+      if(ok){r.quiz=true;save();renderNavigation();}
+    };
+
+    $("options").appendChild(b);
+  });
+
+  $("quizFeedback").className="feedback"+(r.quiz?" goodText":"");
+  $("quizFeedback").textContent=r.quiz?"✓ 已答对。"+l.explanation:"";
+}
+function openLesson(id){
+  if(!lessons.some(l=>l.id===id))return;
+
+  state.currentLessonId=id;
+  const l=currentLesson(),r=record(),i=indexOfLesson();
+
+  $("lessonTag").textContent=`第七阶段 · 第${70+i}课`;
+  $("lessonTitle").textContent=l.title;
+  $("lessonGoal").textContent=l.goal;
+  $("lessonText").innerHTML=l.text;
+  $("example").textContent=l.example;
+  $("takeaway").textContent="记住这一句："+l.takeaway;
+  $("exercisePrompt").textContent=l.prompt;
+  $("exerciseTemplate").textContent=l.template;
+  $("exerciseHint").textContent=l.hint;
+  $("exerciseSolution").textContent=l.answer;
+
+  $("answerInput").hidden=!!l.full;
+  $("codeInput").hidden=!l.full;
+  $("inputLabel").htmlFor=l.full?"codeInput":"answerInput";
+  $("inputLabel").textContent=l.full?"补全下面的代码":"在下方填写空缺部分";
+
+  const input=l.full?$("codeInput"):$("answerInput");
+  input.value=typeof r.draft==="string"?r.draft:(l.starter||"");
+
+  $("exerciseFeedback").className="feedback"+(r.exercise?" goodText":"");
+  $("exerciseFeedback").textContent=r.exercise?"✓ 已通过，可以再次复习。":"";
+  $("hintDetails").open=false;
+  $("solutionDetails").open=false;
+  $("previousLesson").disabled=i===0;
+  $("nextLesson").disabled=i===lessons.length-1;
+  $("nextLesson").textContent=i===lessons.length-1?
+    "本阶段最后一课":"下一课 →";
+
+  renderQuiz();renderStep();save();
+}
+$("previousStep").onclick=()=>{
+  const r=record();
+  if(r.step>0){r.step--;renderStep();}
+};
+$("nextStep").onclick=()=>{
+  const l=currentLesson(),r=record();
+  if(r.step<l.steps.length-1){r.step++;renderStep();}
+};
+$("previousLesson").onclick=()=>{
+  const i=indexOfLesson();
+  if(i>0)openLesson(lessons[i-1].id);
+  window.scrollTo({top:0,behavior:"smooth"});
+};
+$("nextLesson").onclick=()=>{
+  const i=indexOfLesson();
+  if(i<lessons.length-1)openLesson(lessons[i+1].id);
+  window.scrollTo({top:0,behavior:"smooth"});
+};
+
+/* 本阶段填空仅做明确的片段或脚手架检查，不执行Lua。 */
+function normalizeCode(s){
+  return String(s).trim().replace(/\s+/g,"").replace(/;+$/,"");
+}
+function codeLines(s){
+  return String(s).split(/\r?\n/)
+    .map(line=>line.replace(/--.*$/,"").trim())
+    .filter(Boolean)
+    .map(normalizeCode);
+}
+function checkExercise(){
+  const l=currentLesson(),r=record();
+  const value=(l.full?$("codeInput"):$("answerInput")).value;
+  r.draft=value;
+
+  let ok=false,message="";
+  if(l.full){
+    const actual=codeLines(value),expected=codeLines(l.answer);
+    const mismatch=expected.findIndex((line,i)=>line!==actual[i]);
+    ok=mismatch===-1&&actual.length===expected.length;
+    message=mismatch!==-1?
+      `有效代码第${mismatch+1}行还不匹配。检查占位符及方法名。`:
+      "有额外代码，本题只检查给定脚手架。";
+  }else{
+    ok=normalizeCode(value)===normalizeCode(l.answer);
+  }
+
+  $("exerciseFeedback").className="feedback "+(ok?"goodText":"badText");
+  $("exerciseFeedback").textContent=ok?
+    (l.full?
+      "✓ 骨架结构符合参考结构；这不是实际引擎测试。":
+      "✓ 正确！再用自己的话说说这个函数负责什么。"):
+    (message||"暂时不匹配。检查大小写、点号和冒号，只填写题目要求的部分。");
+
+  if(ok)r.exercise=true;
+  save();renderNavigation();
+}
+$("checkAnswer").onclick=checkExercise;
+$("resetAnswer").onclick=()=>{
+  const l=currentLesson(),input=l.full?$("codeInput"):$("answerInput");
+  input.value=l.starter||"";
+  record().draft=input.value;save();
+  $("exerciseFeedback").className="feedback muted";
+  $("exerciseFeedback").textContent="输入已重置，已有通过记录保留。";
+};
+["answerInput","codeInput"].forEach(id=>{
+  $(id).addEventListener("input",e=>{record().draft=e.target.value;save();});
+});
+$("answerInput").addEventListener("keydown",e=>{
+  if(e.key==="Enter")checkExercise();
+});
+$("codeInput").addEventListener("keydown",e=>{
+  if(e.key==="Tab"){
+    e.preventDefault();
+    e.target.setRangeText("    ",e.target.selectionStart,e.target.selectionEnd,"end");
+    e.target.dispatchEvent(new Event("input"));
+  }
+  if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){
+    e.preventDefault();checkExercise();
+  }
+});
+
+$("exportProgress").onclick=()=>{
+  save();
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;a.download="ygo-stage07-progress.json";
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  $("storageNotice").textContent="已请求下载本阶段记录。";
+};
+$("importProgress").onclick=()=>$("importFile").click();
+$("importFile").addEventListener("change",async e=>{
+  const file=e.target.files[0];
+  if(!file)return;
+  try{
+    if(file.size>1024*1024)throw new Error("记录文件过大。");
+    const imported=JSON.parse(await file.text());
+    const safe=sanitizeState(imported);
+    if(!confirm("替换当前第七阶段记录？建议先导出备份。"))return;
+    state=safe;save();openLesson(state.currentLessonId);
+    $("storageNotice").textContent="已导入第七阶段学习记录。";
+  }catch(error){
+    $("storageNotice").textContent="导入失败："+error.message;
+  }finally{
+    e.target.value="";
+  }
+});
+$("clearProgress").onclick=()=>{
+  if(!confirm("清空第七阶段记录和草稿？其他阶段不受影响。"))return;
+  state={
+    schemaVersion:1,
+    stageId:"stage-07-search",
+    currentLessonId:lessons[0].id,
+    records:{}
+  };
+  save();openLesson(state.currentLessonId);
+};
+
+
+/* ---------- 卡组检索固定规则实验台 ---------- */
+const initialDeck=[
+  {id:"A",name:"白刃战士",race:"WARRIOR",monster:true,able:true,location:"DECK"},
+  {id:"B",name:"龙骑兵",race:"DRAGON",monster:true,able:true,location:"DECK"},
+  {id:"C",name:"封锁战士",race:"WARRIOR",monster:true,able:false,location:"DECK"},
+  {id:"D",name:"战士魔法",race:"WARRIOR",monster:false,able:true,location:"DECK"}
+];
+let deck=initialDeck.map(c=>({...c}));
+let lab={hand:0,revealed:[],log:[]};
+
+function eligible(card){
+  return card.location==="DECK"&&
+    card.monster&&
+    card.race==="WARRIOR"&&
+    card.able;
+}
+function makeSelect(labelText,value,options,onchange){
+  const label=document.createElement("label");
+  label.appendChild(document.createTextNode(labelText));
+  const select=document.createElement("select");
+
+  options.forEach(([v,text])=>{
+    const option=document.createElement("option");
+    option.value=v;option.textContent=text;select.appendChild(option);
+  });
+
+  select.value=value;
+  select.addEventListener("change",()=>onchange(select.value));
+  label.appendChild(select);
+  return label;
+}
+function renderDeck(){
+  $("labCards").replaceChildren();
+
+  deck.forEach(card=>{
+    const div=document.createElement("div");
+    div.className="labCard";
+    div.dataset.cardId=card.id;
+
+    const title=document.createElement("h3");
+    title.textContent=`${card.id} · ${card.name}`;
+    div.appendChild(title);
+
+    const detail=document.createElement("p");
+    detail.className="small muted";
+    detail.textContent=
+      `种族：${card.race==="WARRIOR"?"战士族":"龙族"}；`+
+      `类型：${card.monster?"怪兽":"魔法"}；`+
+      `可加入手牌：${card.able?"是":"否"}；`+
+      `位置：${card.location==="DECK"?"卡组":"手牌"}`;
+    div.appendChild(detail);
+
+    div.appendChild(makeSelect(
+      "种族",
+      card.race,
+      [["WARRIOR","战士族"],["DRAGON","龙族"]],
+      value=>{card.race=value;renderDeck();}
+    ));
+
+    div.appendChild(makeSelect(
+      "卡片类型",
+      card.monster?"MONSTER":"SPELL",
+      [["MONSTER","怪兽"],["SPELL","魔法"]],
+      value=>{card.monster=value==="MONSTER";renderDeck();}
+    ));
+
+    div.appendChild(makeSelect(
+      "是否可加入手牌",
+      card.able?"yes":"no",
+      [["yes","可以"],["no","不可以"]],
+      value=>{card.able=value==="yes";renderDeck();}
+    ));
+
+    $("labCards").appendChild(div);
+  });
+
+  const candidates=deck.filter(eligible);
+  const select=$("labChoice");
+  const oldValue=select.value;
+  select.replaceChildren();
+
+  candidates.forEach(card=>{
+    const option=document.createElement("option");
+    option.value=card.id;
+    option.textContent=`${card.name} (${card.id})`;
+    select.appendChild(option);
+  });
+
+  if(candidates.some(card=>card.id===oldValue)){
+    select.value=oldValue;
+  }
+
+  $("runLab").disabled=
+    $("labMode").value==="resolve"&&candidates.length===0;
+
+  $("labCode").textContent=
+`-- filter：只保留战士族且可以加入手牌
+function s.filter(c)
+    return c:IsRace(RACE_WARRIOR)
+        and c:IsAbleToHand()
+end
+
+-- 发动检查：是否至少有1张合法卡
+Duel.IsExistingMatchingCard(
+    s.filter,tp,LOCATION_DECK,0,1,nil)
+
+-- 处理：重新取得集合，选择后移动并公开`;
+
+  renderLabResult();
+}
+
+function renderLabResult(){
+  const candidates=deck.filter(eligible);
+
+  document.querySelectorAll(".labCard").forEach(div=>{
+    const card=deck.find(c=>c.id===div.dataset.cardId);
+    if(card)div.classList.toggle("eligible",eligible(card));
+  });
+
+  $("labResult").innerHTML=
+    `<div class="object">
+      <b>场景状态</b>
+      <div class="fields">
+        <span>卡组合法候选</span>
+        <span>${candidates.map(c=>escHTML(c.name)).join("、")||"无"}</span>
+        <span>IsExistingMatchingCard</span>
+        <span>${candidates.length>0?"true":"false"}</span>
+        <span>当前手牌变化</span>
+        <span>${lab.hand>0?"加入 "+lab.hand+" 张":"没有变化"}</span>
+        <span>本次公开</span>
+        <span>${lab.revealed.map(escHTML).join("、")||"无"}</span>
+      </div>
+    </div>
+    <pre>${escHTML(lab.log.join("\n")||"尚未运行场景。")}</pre>`;
+}
+
+$("runLab").onclick=()=>{
+  const candidates=deck.filter(eligible);
+  lab.log=[];
+
+  if($("labMode").value==="inspect"){
+    lab.log.push(
+      `target检查：合法卡数量 ${candidates.length}，返回 ${candidates.length>0?"true":"false"}。`
+    );
+    lab.log.push("检查不选择卡片，不改变卡组或手牌。");
+    renderLabResult();
+    return;
+  }
+
+  if(candidates.length===0){
+    lab.log.push("没有合法候选，不能继续检索。");
+    renderLabResult();
+    return;
+  }
+
+  const chosen=deck.find(c=>c.id===$("labChoice").value);
+  if(!chosen||!eligible(chosen)){
+    lab.log.push("所选卡已不再满足filter，请重新选择。");
+    renderDeck();
+    return;
+  }
+
+  lab.log.push("operation：重新取得当前合法候选集合。");
+  lab.log.push(`Group:Select：选择 ${chosen.name}。`);
+  lab.log.push("Duel.SendtoHand：教学场景中，卡片成功加入手牌。");
+
+  chosen.location="HAND";
+  lab.hand++;
+
+  lab.log.push("移动返回数量为1，大于0。");
+  lab.log.push(`Duel.ConfirmCards(1-tp,sg)：向对手公开 ${chosen.name}。`);
+  lab.revealed.push(chosen.name);
+
+  renderDeck();
+};
+
+$("labMode").addEventListener("change",renderDeck);
+$("labChoice").addEventListener("change",renderLabResult);
+
+$("resetLab").onclick=()=>{
+  deck=initialDeck.map(c=>({...c}));
+  lab={hand:0,revealed:[],log:[]};
+  $("labMode").value="inspect";
+  renderDeck();
+};
+
+
+/* ---------- 术语 ---------- */
+const glossary=[
+  ["LOCATION_DECK","主卡组区域常量。"],
+  ["GetMatchingGroup","取得符合filter的Group，不选择、不移动卡片。"],
+  ["IsExistingMatchingCard","检查是否存在足够数量的匹配卡，返回布尔值。"],
+  ["Group:Select","从Group中选择卡片，返回所选卡的Group。"],
+  ["Duel.SendtoHand","请求把Group中的卡片加入手牌。"],
+  ["REASON_EFFECT","表示这次移动由效果引起。"],
+  ["Duel.ConfirmCards","向指定玩家公开Group中的卡片信息。"],
+  ["CATEGORY_SEARCH","检索类别。"],
+  ["CATEGORY_TOHAND","加入手牌类别。"],
+  ["SetOperationInfo","登记预计处理信息，不实际移动卡片。"]
+];
+
+$("glossary").innerHTML=glossary.map(([name,description])=>
+  `<div style="margin-top:14px">
+    <strong style="color:var(--blue)">${escHTML(name)}</strong>
+    <div class="muted">${escHTML(description)}</div>
+  </div>`
+).join("");
+
+openLesson(state.currentLessonId);
+renderDeck();
+</script>
+<script src="progress-sync.js"></script>
+</body>
+</html>

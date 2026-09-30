@@ -1,0 +1,1609 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>YGO Lua · 第六阶段：属性筛选</title>
+<style>
+:root{
+  --bg:#0a1020;--panel:#131e33;--panel2:#18263f;
+  --line:#2a3c5d;--text:#e6eeff;--muted:#a8b9d5;
+  --blue:#86a5ff;--green:#69e2b2;--yellow:#ffd782;--red:#ff9aa8;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:radial-gradient(ellipse at top right,#172750,transparent 50%),var(--bg);
+  color:var(--text);
+  font:15px/1.8 system-ui,"Microsoft YaHei",sans-serif;
+}
+button,input,textarea,select{font:inherit}
+button{
+  cursor:pointer;padding:9px 14px;
+  border:1px solid var(--line);border-radius:9px;
+  background:var(--panel2);color:var(--text);
+}
+button:hover{border-color:var(--blue)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{
+  outline:2px solid var(--blue);
+  outline-offset:3px;
+}
+.primary{background:#486aca;border-color:#6485e6;color:white}
+.shell{display:grid;grid-template-columns:255px minmax(0,1fr);min-height:100vh}
+aside{
+  position:sticky;top:0;height:100vh;overflow:auto;
+  padding:22px 16px;border-right:1px solid var(--line);
+  background:#0c1425;
+}
+.brand{font-size:21px;font-weight:800}
+.subtitle{color:var(--muted);font-size:12px}
+.progressBox{
+  margin:20px 0;padding:13px;background:var(--panel);
+  border:1px solid var(--line);border-radius:12px;
+}
+.progressTitle{display:flex;justify-content:space-between;font-size:13px}
+.progressTrack{
+  height:7px;background:#080d18;border-radius:10px;
+  margin-top:10px;overflow:hidden;
+}
+.progressTrack div{
+  height:100%;background:linear-gradient(90deg,var(--blue),var(--green));
+  transition:width .3s;
+}
+nav{display:grid;gap:7px}
+nav button{
+  display:flex;align-items:center;gap:9px;text-align:left;
+  padding:10px;background:transparent;border-color:transparent;
+  font-size:13px;
+}
+nav button.active{background:#22375e;border-color:#5d7fcc}
+nav .num{color:var(--muted);min-width:21px}
+nav .tick{margin-left:auto;color:var(--green)}
+main{min-width:0;width:100%;max-width:1400px;margin:0 auto;padding:30px}
+.hero{
+  padding:24px;border:1px solid var(--line);border-radius:17px;
+  background:linear-gradient(120deg,#1d3053,#132139);
+  margin-bottom:20px;
+}
+.tag{color:var(--green);font-size:12px;font-weight:700;letter-spacing:.08em}
+h1{margin:8px 0;font-size:29px;line-height:1.4}
+h2{font-size:18px;margin:0 0 14px}
+h3{font-size:15px;margin:16px 0 8px}
+p{margin:9px 0}
+.muted{color:var(--muted)}
+.grid{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:20px;
+  align-items:start;
+}
+.panel{
+  padding:20px;border:1px solid var(--line);
+  background:var(--panel);border-radius:14px;
+  margin-bottom:20px;min-width:0;
+}
+.lessonText{color:#d0def5}
+.lessonText strong{color:white}
+code{
+  color:#a5edcf;background:#0b1526;
+  padding:2px 5px;border-radius:5px;
+  font-family:Consolas,monospace;
+}
+pre{
+  background:#080f1d;color:#d6e5ff;
+  border:1px solid #263958;padding:15px;
+  border-radius:10px;white-space:pre-wrap;
+  overflow-wrap:anywhere;font:14px/1.8 Consolas,monospace;
+}
+.note{
+  padding:12px 14px;border-left:3px solid var(--blue);
+  border-radius:0 8px 8px 0;background:#182943;
+  color:#c5d6f2;font-size:13px;margin:15px 0;
+}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+.visual{
+  min-height:170px;padding:18px;background:#0b1424;
+  border:1px dashed #395277;border-radius:12px;
+}
+.visualTitle{font-weight:700;color:var(--yellow);margin-bottom:12px}
+.object{
+  padding:13px;background:#182943;
+  border:1px solid #3c567e;border-radius:10px;
+  margin-bottom:10px;
+}
+.object b{display:block;color:var(--blue);margin-bottom:5px}
+.fields{
+  display:grid;grid-template-columns:auto 1fr;
+  gap:5px 15px;font-size:13px;
+}
+.fields span:nth-child(odd){color:var(--muted)}
+.stepCount{font-size:12px;color:var(--muted)}
+.caption{padding:12px 0 0;min-height:62px;color:#c8d9f7;font-size:14px}
+.option{width:100%;text-align:left;display:block;margin-top:9px}
+.option.good{border-color:var(--green);background:#173d34}
+.option.bad{border-color:var(--red);background:#412b3b}
+.feedback{min-height:30px;padding-top:12px;font-size:14px}
+.goodText{color:var(--green)}
+.badText{color:var(--red)}
+textarea,input[type=text],select{
+  padding:10px;color:#e6efff;background:#090f1d;
+  border:1px solid #3a5276;border-radius:9px;
+}
+textarea,input[type=text]{width:100%;font:14px/1.8 Consolas,monospace}
+textarea{min-height:280px;resize:vertical;tab-size:4}
+[hidden]{display:none!important}
+details{margin-top:13px}
+summary{cursor:pointer;color:var(--blue)}
+.footerNav{
+  display:flex;justify-content:space-between;
+  align-items:center;gap:14px;margin-bottom:25px;
+}
+.badge{color:var(--green);font-size:13px}
+.small{font-size:12px}
+.settings{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.cards{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+  gap:12px;margin-top:16px;
+}
+.labCard{
+  padding:15px;background:#0b1424;
+  border:1px solid #3c567e;border-radius:12px;
+}
+.labCard.match{border-color:var(--green);background:#102c2b}
+.labCard h3{margin-top:0;color:var(--blue)}
+.labCard label{display:block;font-size:13px;margin-top:8px}
+.labCard select{width:100%;padding:7px}
+.labCard .reason{font-size:12px;color:var(--muted);margin-top:10px}
+#storageNotice{font-size:12px;color:var(--yellow)}
+@media(max-width:1100px){.grid{grid-template-columns:1fr}}
+@media(max-width:700px){
+  .shell{display:block}
+  aside{position:static;height:auto;padding:14px}
+  nav{display:flex;overflow:auto}
+  nav button{min-width:185px}
+  .progressBox{margin:12px 0}
+  main{padding:15px}
+  h1{font-size:24px}
+  .hero,.panel{padding:17px}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside>
+  <div class="brand">✦ YGO Lua 学习室</div>
+  <div class="subtitle">先看懂，再动手，最后独立写卡</div>
+
+  <div class="progressBox">
+    <div class="progressTitle">
+      <span>第六阶段 · 属性筛选</span>
+      <strong id="progressText"></strong>
+    </div>
+    <div class="progressTrack">
+      <div id="progressBar"></div>
+    </div>
+  </div>
+
+  <nav id="nav" aria-label="课程目录"></nav>
+
+  <details>
+    <summary>学习记录与备份</summary>
+    <p class="small muted">
+      本阶段使用固定课程 ID，不影响前面阶段。
+    </p>
+    <div class="actions">
+      <button id="exportProgress">导出记录</button>
+      <button id="importProgress">导入记录</button>
+      <button id="clearProgress">清空本阶段</button>
+    </div>
+    <input id="importFile" type="file" accept=".json,application/json" hidden>
+  </details>
+
+  <p id="storageNotice"></p>
+</aside>
+
+<main>
+<header class="hero">
+  <div class="tag" id="lessonTag"></div>
+  <h1 id="lessonTitle"></h1>
+  <div class="muted" id="lessonGoal"></div>
+</header>
+
+<div class="grid">
+<div>
+<section class="panel">
+  <h2>① 先理解一个小知识点</h2>
+  <div id="lessonText" class="lessonText"></div>
+  <pre id="example"></pre>
+  <div class="note" id="takeaway"></div>
+</section>
+
+<section class="panel">
+  <h2>② 点击观察</h2>
+  <p class="small muted">预设教学演示，不执行任意 Lua。</p>
+  <div class="visual" id="visual"></div>
+  <pre id="stepCode"></pre>
+  <div class="caption" id="stepCaption" aria-live="polite"></div>
+  <div class="actions">
+    <button id="previousStep">← 上一步</button>
+    <button id="nextStep" class="primary">观察下一步 →</button>
+  </div>
+  <div class="stepCount" id="stepCount"></div>
+</section>
+</div>
+
+<div>
+<section class="panel">
+  <h2>③ 确认你理解了</h2>
+  <p id="question"></p>
+  <div id="options"></div>
+  <div class="feedback" id="quizFeedback" aria-live="polite"></div>
+</section>
+
+<section class="panel">
+  <h2>④ 只写一点点</h2>
+  <p id="exercisePrompt"></p>
+  <pre id="exerciseTemplate"></pre>
+
+  <label for="answerInput" class="small muted" id="inputLabel">
+    填写空缺部分
+  </label>
+
+  <input id="answerInput" type="text"
+    autocomplete="off" spellcheck="false">
+
+  <textarea id="codeInput" hidden
+    spellcheck="false" aria-label="代码骨架练习"></textarea>
+
+  <div class="actions">
+    <button class="primary" id="checkAnswer">检查练习</button>
+    <button id="resetAnswer">重新填写</button>
+  </div>
+
+  <div class="feedback" id="exerciseFeedback" aria-live="polite"></div>
+
+  <details id="hintDetails">
+    <summary>给我一个提示</summary>
+    <p id="exerciseHint"></p>
+  </details>
+
+  <details id="solutionDetails">
+    <summary>查看参考答案</summary>
+    <pre id="exerciseSolution"></pre>
+  </details>
+</section>
+
+<section class="panel">
+  <h2>本课完成条件</h2>
+  <div id="checklist"></div>
+  <p class="small muted">
+    本阶段的综合题只组合已经介绍过的 API。
+  </p>
+</section>
+</div>
+</div>
+
+<div class="footerNav">
+  <button id="previousLesson">← 上一课</button>
+  <span id="lessonStatus" class="badge"></span>
+  <button id="nextLesson" class="primary">下一课 →</button>
+</div>
+
+<section class="panel">
+<h2>⑤ 属性筛选实验台</h2>
+
+<p>
+修改卡片属性，观察 filter 如何决定一张卡是否进入 Group。
+</p>
+
+<div class="note">
+实验台运行固定教学规则，不读取上方代码。
+每次只观察 filter 的返回结果，不执行查询、取对象或卡片移动。
+</div>
+
+<div class="settings">
+  <label>筛选模式
+    <select id="filterMode">
+      <option value="type">怪兽卡</option>
+      <option value="attribute">光属性</option>
+      <option value="race">战士族</option>
+      <option value="level">等级不超过4</option>
+      <option value="setcode">属于字段 0x1234</option>
+      <option value="hand">可以加入手牌</option>
+      <option value="complex">光属性且战士族</option>
+    </select>
+  </label>
+
+  <button id="resetLab">重置场景</button>
+</div>
+
+<div class="cards" id="labCards"></div>
+
+<h3>对应 filter</h3>
+<pre id="labCode"></pre>
+
+<h3>筛选结果</h3>
+<div id="labResult"></div>
+
+<details>
+  <summary>建议完成的实验</summary>
+  <ol>
+    <li>切换“怪兽卡”，观察怪兽与魔法卡的结果。</li>
+    <li>切换“光属性”，修改卡片属性。</li>
+    <li>切换“等级不超过4”，测试等级4和等级5的差异。</li>
+    <li>最后使用“光属性且战士族”，观察 and 必须同时满足。</li>
+  </ol>
+</details>
+</section>
+
+<section class="panel">
+<details>
+  <summary>随时可查：本阶段术语小字典</summary>
+  <div id="glossary"></div>
+</details>
+</section>
+
+<p class="small muted">
+本阶段采用现代 EDOPro 常见脚本风格。
+真实引擎中还会有更多类型、属性、种族和字段常量。
+</p>
+</main>
+</div>
+
+<script>
+"use strict";
+
+const $=id=>document.getElementById(id);
+
+function esc(value){
+  return String(value).replace(/[&<>"']/g,c=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  })[c]);
+}
+
+function box(title,fields){
+  return `<div class="object">
+    <b>${esc(title)}</b>
+    <div class="fields">${
+      fields.map(([k,v])=>
+        `<span>${esc(k)}</span><span>${esc(v)}</span>`
+      ).join("")
+    }</div>
+  </div>`;
+}
+
+function S(code,caption,fields){
+  return {code,caption,fields};
+}
+
+const lessons=[
+{
+  id:"filter-review",
+  title:"复习 filter",
+  goal:"重新确认 filter 只负责回答“保留还是排除”。",
+  text:`
+    <p>上一阶段已经写过：</p>
+    <pre><code>function s.filter(c)
+    return c:IsFaceup()
+end</code></pre>
+    <p>调用者会把一张候选卡传给参数 <code>c</code>。</p>
+    <p>filter返回 <code>true</code>，卡片保留；
+    返回 <code>false</code>，卡片排除。</p>
+    <p>filter本身不移动卡、不选择对象、不破坏卡。</p>
+  `,
+  example:`function s.filter(c)
+    return c:IsFaceup()
+end`,
+  takeaway:"filter接收一张候选卡，返回一个布尔值。",
+  steps:[
+    S("s.filter(候选卡A)","A是表侧，返回true。",
+      [["c","候选卡A"],["结果","true"],["A是否移动","否"]]),
+    S("s.filter(候选卡B)","B是里侧，返回false。",
+      [["c","候选卡B"],["结果","false"],["B是否移动","否"]]),
+    S("-- 查询函数收集返回true的卡","filter不负责创建Group。",
+      [["返回true","进入结果"],["返回false","排除"]])
+  ],
+  question:"filter返回false时，通常意味着什么？",
+  options:["对卡片执行破坏","把这张候选卡排除","把卡片移动到墓地"],
+  correct:1,
+  explanation:"filter只决定候选卡是否保留。",
+  prompt:"本课filter只判断表侧。填写方法调用。",
+  template:"function s.filter(c)\n    return ____\nend",
+  answer:"c:IsFaceup()",
+  hint:"这是上一阶段已经学过的表侧判断方法。"
+},
+{
+  id:"is-type",
+  title:"IsType：判断卡片类型",
+  goal:"判断一张卡是否是怪兽、魔法或陷阱。",
+  text:`
+    <p><code>c:IsType(TYPE_MONSTER)</code>
+    判断卡片c是否具有怪兽卡类型。</p>
+    <p>这里的 <code>TYPE_MONSTER</code> 是类型常量。</p>
+    <p>这个方法只做判断，不判断卡片现在位于哪里。</p>
+    <p>一张怪兽卡在手牌中仍然是怪兽卡；
+    但它不因此位于怪兽区。</p>
+  `,
+  example:`function s.filter(c)
+    return c:IsType(TYPE_MONSTER)
+end`,
+  takeaway:"IsType判断卡片类型，LOCATION常量判断位置。",
+  steps:[
+    S("c:IsType(TYPE_MONSTER)","训练战士是怪兽卡，返回true。",
+      [["卡片类型","怪兽"],["结果","true"]]),
+    S("c:IsType(TYPE_MONSTER)","魔法卡不是怪兽，返回false。",
+      [["卡片类型","魔法"],["结果","false"]]),
+    S("-- 类型与区域分开","怪兽卡在手牌中仍通过类型检查。",
+      [["类型","怪兽"],["位置","手牌"],["类型检查","true"]])
+  ],
+  question:"IsType(TYPE_MONSTER)主要判断什么？",
+  options:["卡片当前位置","卡片是否是怪兽类型","卡片是否表侧"],
+  correct:1,
+  explanation:"IsType判断类型，不判断区域或表示形式。",
+  prompt:"填写只保留怪兽卡的filter。",
+  template:"function s.filter(c)\n    return ____\nend",
+  answer:"c:IsType(TYPE_MONSTER)",
+  hint:"对象c调用IsType，参数是TYPE_MONSTER。"
+},
+{
+  id:"is-attribute",
+  title:"IsAttribute：判断属性",
+  goal:"判断卡片是否具有指定属性。",
+  text:`
+    <p><code>c:IsAttribute(ATTRIBUTE_LIGHT)</code>
+    判断卡片是否具有光属性。</p>
+    <p>常见属性常量包括：
+    <code>ATTRIBUTE_LIGHT</code>、<code>ATTRIBUTE_DARK</code>、
+    <code>ATTRIBUTE_FIRE</code> 等。</p>
+    <p>属性和类型是两种不同信息。
+    光属性不代表一定是怪兽，也不代表一定在场上。</p>
+  `,
+  example:`function s.filter(c)
+    return c:IsAttribute(ATTRIBUTE_LIGHT)
+end`,
+  takeaway:"IsAttribute判断属性，不替代IsType或IsLocation。",
+  steps:[
+    S("c:IsAttribute(ATTRIBUTE_LIGHT)","光属性卡片返回true。",
+      [["属性","光"],["结果","true"]]),
+    S("c:IsAttribute(ATTRIBUTE_LIGHT)","暗属性卡片返回false。",
+      [["属性","暗"],["结果","false"]]),
+    S("-- 位置不影响属性判断","手牌中的光属性卡仍然是光属性。",
+      [["属性","光"],["位置","手牌"],["结果","true"]])
+  ],
+  question:"光属性是否代表它一定是怪兽卡？",
+  options:["是","不是，属性和类型是不同条件","只有等级4才是"],
+  correct:1,
+  explanation:"属性是属性，怪兽、魔法、陷阱是卡片类型。",
+  prompt:"填写只保留光属性卡片的表达式。",
+  template:"return ____",
+  answer:"c:IsAttribute(ATTRIBUTE_LIGHT)",
+  hint:"使用IsAttribute和ATTRIBUTE_LIGHT。"
+},
+{
+  id:"is-race",
+  title:"IsRace：判断种族",
+  goal:"判断卡片是否属于指定种族。",
+  text:`
+    <p><code>c:IsRace(RACE_WARRIOR)</code>
+    判断卡片是否是战士族。</p>
+    <p>常见种族常量包括：
+    <code>RACE_WARRIOR</code>、<code>RACE_DRAGON</code>、
+    <code>RACE_SPELLCASTER</code> 等。</p>
+    <p>属性、种族、类型可以同时使用。
+    但暂时先让filter只检查一个条件。</p>
+  `,
+  example:`function s.filter(c)
+    return c:IsRace(RACE_WARRIOR)
+end`,
+  takeaway:"IsRace判断种族，种族和属性不是同一维度。",
+  steps:[
+    S("c:IsRace(RACE_WARRIOR)","战士族卡片返回true。",
+      [["种族","战士族"],["结果","true"]]),
+    S("c:IsRace(RACE_WARRIOR)","龙族卡片返回false。",
+      [["种族","龙族"],["结果","false"]]),
+    S("-- 与属性可以同时存在","同一卡片可以是光属性战士族。",
+      [["属性","光"],["种族","战士族"]])
+  ],
+  question:"下面哪个方法用于判断种族？",
+  options:["IsType","IsRace","IsLocation"],
+  correct:1,
+  explanation:"IsRace用于判断卡片种族。",
+  prompt:"填写只保留战士族卡片的表达式。",
+  template:"return ____",
+  answer:"c:IsRace(RACE_WARRIOR)",
+  hint:"方法是IsRace，常量是RACE_WARRIOR。"
+},
+{
+  id:"is-level",
+  title:"IsLevel：判断等级",
+  goal:"判断等级是否等于指定数值。",
+  text:`
+    <p><code>c:IsLevel(4)</code>
+    判断卡片等级是否为4。</p>
+    <p>参数4是数字，不是常量，也不需要引号。</p>
+    <p>本课只学习等于4。
+    “等级不超过4”要使用下一课介绍的比较方法。</p>
+    <p>等级是卡片属性的一部分，不是卡片所在区域。</p>
+  `,
+  example:`function s.filter(c)
+    return c:IsLevel(4)
+end`,
+  takeaway:"IsLevel(4)判断等级等于4，不是小于等于4。",
+  steps:[
+    S("c:IsLevel(4)","等级4返回true。",
+      [["等级","4"],["结果","true"]]),
+    S("c:IsLevel(4)","等级5返回false。",
+      [["等级","5"],["结果","false"]]),
+    S("-- 只判断相等","等级3也不满足IsLevel(4)。",
+      [["等级","3"],["结果","false"]])
+  ],
+  question:"IsLevel(4)能匹配等级5吗？",
+  options:["能，因为5大于4","不能，它判断等于4","只有表侧才行"],
+  correct:1,
+  explanation:"IsLevel的这个调用判断等级是否等于指定数字。",
+  prompt:"填写判断等级等于4的表达式。",
+  template:"return ____",
+  answer:"c:IsLevel(4)",
+  hint:"参数是数字4，不要写成字符串\"4\"。"
+},
+{
+  id:"is-level-lte",
+  title:"IsLevelBelow：等级范围",
+  goal:"从等值判断过渡到等级范围判断。",
+  text:`
+    <p>实际写卡经常需要“等级不超过4”。</p>
+    <p>本课使用：</p>
+    <pre><code>c:IsLevelBelow(4)</code></pre>
+    <p>它表示等级小于等于4。</p>
+    <p>等级4、等级3可以通过；等级5不能通过。</p>
+    <p>不要用 <code>IsLevel(4)</code> 代替它，
+    因为IsLevel只匹配恰好4级。</p>
+  `,
+  example:`function s.filter(c)
+    return c:IsLevelBelow(4)
+end`,
+  takeaway:"IsLevelBelow(4)表示等级小于等于4。",
+  steps:[
+    S("c:IsLevelBelow(4)","等级3不超过4，返回true。",
+      [["等级","3"],["结果","true"]]),
+    S("c:IsLevelBelow(4)","等级4也通过。",
+      [["等级","4"],["结果","true"]]),
+    S("c:IsLevelBelow(4)","等级5超过4，返回false。",
+      [["等级","5"],["结果","false"]])
+  ],
+  question:"如果需求是“等级4以下”，更合适使用哪个？",
+  options:["IsLevel(4)","IsLevelBelow(4)","IsType(4)"],
+  correct:1,
+  explanation:"IsLevelBelow包含等于4的情况。",
+  prompt:"填写等级不超过4的表达式。",
+  template:"return ____",
+  answer:"c:IsLevelBelow(4)",
+  hint:"方法名是IsLevelBelow，参数仍然是数字4。"
+},
+{
+  id:"is-set-card",
+  title:"IsSetCard：判断字段",
+  goal:"认识字段判断，区分字段和类型。",
+  text:`
+    <p>卡片字段通常用十六进制编号表示。</p>
+    <p><code>c:IsSetCard(0x1234)</code>
+    判断卡片是否属于字段0x1234。</p>
+    <p>字段不是卡名，也不是卡片类型。
+    某张卡可以同时属于多个字段。</p>
+    <p>字段编号必须以实际卡片脚本和数据库约定为准。
+    本课使用0x1234作为教学编号。</p>
+  `,
+  example:`function s.filter(c)
+    return c:IsSetCard(0x1234)
+end`,
+  takeaway:"IsSetCard判断字段归属，字段编号要使用实际定义。",
+  steps:[
+    S("c:IsSetCard(0x1234)","属于该字段的卡返回true。",
+      [["字段","0x1234"],["结果","true"]]),
+    S("c:IsSetCard(0x1234)","不属于该字段的卡返回false。",
+      [["字段","其他字段"],["结果","false"]]),
+    S("-- 字段不是类型","同一字段可以包含不同类型的卡。",
+      [["字段","0x1234"],["类型","不由字段调用决定"]])
+  ],
+  question:"0x1234在本课中代表什么？",
+  options:["等级1234","教学用字段编号","玩家编号"],
+  correct:1,
+  explanation:"它是本课假设的字段编号，实际写卡要用真实字段定义。",
+  prompt:"填写判断字段0x1234的表达式。",
+  template:"return ____",
+  answer:"c:IsSetCard(0x1234)",
+  hint:"使用IsSetCard，字段编号保持十六进制写法。"
+},
+{
+  id:"is-able-to-hand",
+  title:"IsAbleToHand：能否加入手牌",
+  goal:"区分“符合属性”和“当前能否执行移动”。",
+  text:`
+    <p><code>c:IsAbleToHand()</code>
+    判断当前卡片是否可以加入手牌。</p>
+    <p>它不是判断卡片是否已经在手牌。
+    一张卡在卡组中也可能通过这个检查。</p>
+    <p>这个判断会受到卡片当前状态和其他效果影响，
+    因此通常比自己手写一个简单属性判断更可靠。</p>
+    <p>本课只学习方法本身，不实现SendtoHand。</p>
+  `,
+  example:`function s.filter(c)
+    return c:IsAbleToHand()
+end`,
+  takeaway:"IsAbleToHand判断当前能否执行加入手牌，不是判断当前位置。",
+  steps:[
+    S("c:IsAbleToHand()","卡片可以加入手牌，返回true。",
+      [["当前位置","卡组"],["可加入手牌","true"]]),
+    S("c:IsAbleToHand()","受到限制的卡返回false。",
+      [["当前位置","卡组"],["可加入手牌","false"]]),
+    S("-- 这是执行前的合法性条件","这里只判断，不移动卡片。",
+      [["卡片位置","不变"],["是否加入手牌","没有"]])
+  ],
+  question:"IsAbleToHand()为true时，卡片已经进入手牌了吗？",
+  options:["已经进入","没有，只表示当前可以加入","已经加入但界面没刷新"],
+  correct:1,
+  explanation:"这是能力检查，实际移动需要其他处理API。",
+  prompt:"填写判断卡片能否加入手牌的表达式。",
+  template:"return ____",
+  answer:"c:IsAbleToHand()",
+  hint:"方法没有参数和方法名中的ToHand表示目标移动。"
+},
+{
+  id:"and",
+  title:"and：同时满足",
+  goal:"把两个已经学过的判断组合起来。",
+  text:`
+    <p>Lua中的<code>and</code>表示两个条件都必须成立。</p>
+    <p>例如“光属性且战士族”：</p>
+    <pre><code>return c:IsAttribute(ATTRIBUTE_LIGHT)
+    and c:IsRace(RACE_WARRIOR)</code></pre>
+    <p>只有左边和右边都为true，整体结果才为true。</p>
+    <p>不要把and理解成“依次执行两个效果”。
+    这里仍然只是计算筛选结果。</p>
+  `,
+  example:`function s.filter(c)
+    return c:IsAttribute(ATTRIBUTE_LIGHT)
+        and c:IsRace(RACE_WARRIOR)
+end`,
+  takeaway:"and要求两边都满足，适合表达“并且”。",
+  steps:[
+    S("光属性true，战士族true","两个条件都满足，保留。",
+      [["左侧","true"],["右侧","true"],["结果","true"]]),
+    S("光属性true，战士族false","有一个不满足，排除。",
+      [["左侧","true"],["右侧","false"],["结果","false"]]),
+    S("光属性false，战士族true","仍有一个不满足，排除。",
+      [["左侧","false"],["右侧","true"],["结果","false"]])
+  ],
+  question:"and连接两个条件时，什么情况下整体为true？",
+  options:["任意一边true","两边都true","两边都false"],
+  correct:1,
+  explanation:"and表示同时满足。",
+  prompt:"把两个判断用“并且”连接起来。",
+  template:`return c:IsAttribute(ATTRIBUTE_LIGHT)
+    ____ c:IsRace(RACE_WARRIOR)`,
+  answer:"and",
+  hint:"Lua中表示逻辑“并且”的关键字。"
+},
+{
+  id:"or",
+  title:"or 与括号",
+  goal:"理解“满足任一条件”和条件分组。",
+  text:`
+    <p>Lua中的<code>or</code>表示至少一个条件成立即可。</p>
+    <p>例如“光属性或暗属性”：</p>
+    <pre><code>return c:IsAttribute(ATTRIBUTE_LIGHT)
+    or c:IsAttribute(ATTRIBUTE_DARK)</code></pre>
+    <p>当and和or混用时，建议使用括号明确意图。</p>
+    <p>例如“光属性，并且属于战士族或魔法师族”：</p>
+    <pre><code>return c:IsAttribute(ATTRIBUTE_LIGHT)
+    and (
+        c:IsRace(RACE_WARRIOR)
+        or c:IsRace(RACE_SPELLCASTER)
+    )</code></pre>
+  `,
+  example:`-- 任意一个属性满足即可
+return c:IsAttribute(ATTRIBUTE_LIGHT)
+    or c:IsAttribute(ATTRIBUTE_DARK)`,
+  takeaway:"or表示任一条件；复杂表达式用括号明确分组。",
+  steps:[
+    S("光属性true，暗属性false","or只要求至少一个true。",
+      [["左侧","true"],["右侧","false"],["结果","true"]]),
+    S("光属性false，暗属性false","没有条件满足。",
+      [["左侧","false"],["右侧","false"],["结果","false"]]),
+    S("and与or组合","括号决定“战士或魔法师”先合并。",
+      [["整体要求","光属性且（战士或魔法师）"]])
+  ],
+  question:"光属性或暗属性的filter应该使用什么关键字？",
+  options:["and","or","not"],
+  correct:1,
+  explanation:"or表示至少一个条件成立即可。",
+  prompt:"填写表示“光属性或暗属性”的连接词。",
+  template:`return c:IsAttribute(ATTRIBUTE_LIGHT)
+    ____ c:IsAttribute(ATTRIBUTE_DARK)`,
+  answer:"or",
+  hint:"这是Lua中表示“或者”的关键字。"
+},
+{
+  id:"complex-filter",
+  title:"综合：复杂filter",
+  goal:"将类型、属性、种族、等级与可加入手牌组合起来。",
+  text:`
+    <p>最后的筛选要求：</p>
+    <p>① 必须是怪兽；<br>
+    ② 必须是光属性；<br>
+    ③ 必须是战士族；<br>
+    ④ 等级不超过4；<br>
+    ⑤ 可以加入手牌。</p>
+    <p>五个条件之间是“并且”，所以使用多个<code>and</code>。</p>
+    <p>本课只组合已经介绍过的方法，不再加入新API。</p>
+  `,
+  example:`function s.filter(c)
+    return c:IsType(TYPE_MONSTER)
+        and c:IsAttribute(ATTRIBUTE_LIGHT)
+        and c:IsRace(RACE_WARRIOR)
+        and c:IsLevelBelow(4)
+        and c:IsAbleToHand()
+end`,
+  takeaway:"filter可以表达复杂条件，但每一项都应来自明确的卡文要求。",
+  steps:[
+    S("先判断类型","不是怪兽的卡直接排除。",
+      [["通过条件","TYPE_MONSTER"]]),
+    S("再判断属性与种族","必须同时是光属性和战士族。",
+      [["组合关系","and"]]),
+    S("最后判断等级与可加入手牌","所有条件都满足才返回true。",
+      [["最终结果","全部通过才保留"]])
+  ],
+  question:"综合filter中五个条件之间应该使用什么关系？",
+  options:["全部用or","全部用and","只保留最后一个条件"],
+  correct:1,
+  explanation:"题目要求所有条件都满足，因此使用and。",
+  prompt:"补全五个空缺。只组合本阶段已经学过的判断方法。",
+  template:"受限骨架检查，不执行任意Lua。",
+  full:true,
+  starter:`function s.filter(c)
+    return ____
+        and ____
+        and ____
+        and ____
+        and ____
+end`,
+  answer:`function s.filter(c)
+    return c:IsType(TYPE_MONSTER)
+        and c:IsAttribute(ATTRIBUTE_LIGHT)
+        and c:IsRace(RACE_WARRIOR)
+        and c:IsLevelBelow(4)
+        and c:IsAbleToHand()
+end`,
+  hint:"按课程顺序：类型、属性、种族、等级、加入手牌能力。"
+}
+];
+
+/* ---------- 通用记录与页面 ---------- */
+const STAGE={
+ id:"stage-06-filter-properties-v1",
+ startNumber:59,
+ lessons
+};
+
+function esc2(value){
+  return String(value).replace(/[&<>"']/g,c=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  })[c]);
+}
+
+const KEY="ygo-learning:"+STAGE.id;
+let state={
+  schemaVersion:1,
+  stageId:STAGE.id,
+  currentLessonId:lessons[0].id,
+  records:{}
+};
+
+function emptyRecord(){
+  return {
+    step:0,
+    observed:false,
+    quiz:false,
+    exercise:false,
+    draft:null
+  };
+}
+
+function sanitize(raw){
+  if(!raw || raw.stageId!==STAGE.id || raw.schemaVersion!==1){
+    throw new Error("不是本阶段兼容的记录文件。");
+  }
+
+  const clean={
+    schemaVersion:1,
+    stageId:STAGE.id,
+    currentLessonId:lessons[0].id,
+    records:{}
+  };
+
+  if(lessons.some(l=>l.id===raw.currentLessonId)){
+    clean.currentLessonId=raw.currentLessonId;
+  }
+
+  for(const l of lessons){
+    const r=raw.records?.[l.id];
+    if(!r || typeof r!=="object")continue;
+
+    clean.records[l.id]={
+      step:Number.isInteger(r.step) &&
+        r.step>=0 &&
+        r.step<l.steps.length ? r.step : 0,
+      observed:r.observed===true,
+      quiz:r.quiz===true,
+      exercise:r.exercise===true,
+      draft:typeof r.draft==="string" ?
+        r.draft.slice(0,60000) : null
+    };
+  }
+
+  return clean;
+}
+
+try{
+  const raw=localStorage.getItem(KEY);
+  if(raw)state=sanitize(JSON.parse(raw));
+}catch{
+  $("storageNotice").textContent=
+    "无法读取旧记录，已开启新的本次学习记录。";
+}
+
+function currentIndex(){
+  return lessons.findIndex(l=>l.id===state.currentLessonId);
+}
+
+function currentLesson(){
+  return lessons[currentIndex()];
+}
+
+function record(id=state.currentLessonId){
+  if(!state.records[id]){
+    state.records[id]=emptyRecord();
+  }
+  return state.records[id];
+}
+
+function save(){
+  try{
+    localStorage.setItem(KEY,JSON.stringify(state));
+  }catch{
+    $("storageNotice").textContent=
+      "浏览器无法保存记录，可以使用导出功能备份。";
+  }
+}
+
+function complete(id){
+  const r=record(id);
+  return r.observed && r.quiz && r.exercise;
+}
+
+function renderNavigation(){
+  $("nav").replaceChildren();
+
+  lessons.forEach((lesson,index)=>{
+    const button=document.createElement("button");
+    const active=lesson.id===state.currentLessonId;
+
+    button.className=active?"active":"";
+    if(active)button.setAttribute("aria-current","step");
+
+    button.innerHTML=
+      `<span class="num">${STAGE.startNumber+index}</span>`+
+      `<span>${esc2(lesson.title)}</span>`+
+      `<span class="tick">${complete(lesson.id)?"✓":""}</span>`;
+
+    button.onclick=()=>openLesson(lesson.id);
+    $("nav").appendChild(button);
+  });
+
+  const count=lessons.filter(l=>complete(l.id)).length;
+  $("progressText").textContent=`${count} / ${lessons.length}`;
+  $("progressBar").style.width=
+    `${count/lessons.length*100}%`;
+
+  const r=record();
+
+  $("checklist").innerHTML=[
+    [r.observed,"看完全部观察步骤"],
+    [r.quiz,"答对理解题"],
+    [r.exercise,"完成本课小练习"]
+  ].map(([ok,text])=>
+    `<div class="${ok?"goodText":"muted"}">
+      ${ok?"✓":"○"} ${text}
+    </div>`
+  ).join("");
+
+  $("lessonStatus").textContent=
+    complete(state.currentLessonId) ?
+    "✓ 本课已完成" :
+    "按自己的节奏慢慢来";
+}
+
+function renderStep(){
+  const lesson=currentLesson();
+  const r=record();
+  const current=lesson.steps[r.step];
+
+  $("visual").innerHTML=
+    `<div class="visualTitle">
+      教学场景 · 第${r.step+1}步
+    </div>`+
+    box("当前状态",current.fields);
+
+  $("stepCode").textContent=current.code;
+  $("stepCaption").textContent=current.caption;
+  $("stepCount").textContent=
+    `观察进度：${r.step+1} / ${lesson.steps.length}`;
+
+  $("previousStep").disabled=r.step===0;
+  $("nextStep").disabled=
+    r.step===lesson.steps.length-1;
+
+  $("nextStep").textContent=
+    r.step===lesson.steps.length-1 ?
+    "观察完毕 ✓" :
+    "观察下一步 →";
+
+  if(r.step===lesson.steps.length-1){
+    r.observed=true;
+  }
+
+  save();
+  renderNavigation();
+}
+
+function renderQuiz(){
+  const lesson=currentLesson();
+  const r=record();
+
+  $("question").textContent=lesson.question;
+  $("options").replaceChildren();
+
+  lesson.options.forEach((text,index)=>{
+    const button=document.createElement("button");
+
+    button.className=
+      "option"+(r.quiz && index===lesson.correct ?
+      " good" : "");
+
+    button.textContent=
+      `${String.fromCharCode(65+index)}. ${text}`;
+
+    button.onclick=()=>{
+      document.querySelectorAll("#options button")
+        .forEach(item=>item.classList.remove("good","bad"));
+
+      const correct=index===lesson.correct;
+      button.classList.add(correct?"good":"bad");
+
+      $("quizFeedback").className=
+        "feedback "+(correct?"goodText":"badText");
+
+      $("quizFeedback").textContent=correct ?
+        "正确！"+lesson.explanation :
+        "还不对，回看知识点后可以继续选择。";
+
+      if(correct){
+        r.quiz=true;
+        save();
+        renderNavigation();
+      }
+    };
+
+    $("options").appendChild(button);
+  });
+
+  $("quizFeedback").className=
+    "feedback"+(r.quiz?" goodText":"");
+
+  $("quizFeedback").textContent=r.quiz ?
+    "✓ 已答对。"+lesson.explanation :
+    "";
+}
+
+function openLesson(id){
+  if(!lessons.some(lesson=>lesson.id===id))return;
+
+  state.currentLessonId=id;
+
+  const lesson=currentLesson();
+  const r=record();
+  const index=currentIndex();
+
+  $("lessonTag").textContent=
+    `第六阶段 · 第${STAGE.startNumber+index}课`;
+
+  $("lessonTitle").textContent=lesson.title;
+  $("lessonGoal").textContent=lesson.goal;
+  $("lessonText").innerHTML=lesson.text;
+  $("example").textContent=lesson.example;
+  $("takeaway").textContent=
+    "记住这一句："+lesson.takeaway;
+
+  $("exercisePrompt").textContent=lesson.prompt;
+  $("exerciseTemplate").textContent=lesson.template;
+  $("exerciseHint").textContent=lesson.hint;
+  $("exerciseSolution").textContent=lesson.answer;
+
+  $("answerInput").hidden=!!lesson.full;
+  $("codeInput").hidden=!lesson.full;
+
+  $("inputLabel").htmlFor=
+    lesson.full ? "codeInput" : "answerInput";
+
+  $("inputLabel").textContent=
+    lesson.full ?
+    "补全下面的代码" :
+    "在下方填写空缺部分";
+
+  const input=lesson.full ?
+    $("codeInput") :
+    $("answerInput");
+
+  input.value=typeof r.draft==="string" ?
+    r.draft :
+    lesson.starter || "";
+
+  $("exerciseFeedback").className=
+    "feedback"+(r.exercise?" goodText":"");
+
+  $("exerciseFeedback").textContent=r.exercise ?
+    "✓ 已通过，可以再次复习。" :
+    "";
+
+  $("hintDetails").open=false;
+  $("solutionDetails").open=false;
+
+  $("previousLesson").disabled=index===0;
+  $("nextLesson").disabled=index===lessons.length-1;
+
+  $("nextLesson").textContent=
+    index===lessons.length-1 ?
+    "本阶段最后一课" :
+    "下一课 →";
+
+  renderQuiz();
+  renderStep();
+  save();
+}
+
+$("previousStep").onclick=()=>{
+  const r=record();
+
+  if(r.step>0){
+    r.step--;
+    renderStep();
+  }
+};
+
+$("nextStep").onclick=()=>{
+  const lesson=currentLesson();
+  const r=record();
+
+  if(r.step<lesson.steps.length-1){
+    r.step++;
+    renderStep();
+  }
+};
+
+$("previousLesson").onclick=()=>{
+  const index=currentIndex();
+
+  if(index>0){
+    openLesson(lessons[index-1].id);
+  }
+
+  window.scrollTo({top:0,behavior:"smooth"});
+};
+
+$("nextLesson").onclick=()=>{
+  const index=currentIndex();
+
+  if(index<lessons.length-1){
+    openLesson(lessons[index+1].id);
+  }
+
+  window.scrollTo({top:0,behavior:"smooth"});
+};
+
+function normalize(value){
+  return String(value)
+    .trim()
+    .replace(/\s+/g,"")
+    .replace(/;+$/,"");
+}
+
+function codeLines(value){
+  return String(value)
+    .split(/\r?\n/)
+    .map(line=>line.replace(/--.*$/,"").trim())
+    .filter(Boolean)
+    .map(normalize);
+}
+
+function checkExercise(){
+  const lesson=currentLesson();
+  const r=record();
+  const input=lesson.full ?
+    $("codeInput") :
+    $("answerInput");
+
+  const value=input.value;
+  r.draft=value;
+
+  let correct=false;
+  let message="";
+
+  if(lesson.full){
+    const actual=codeLines(value);
+    const expected=codeLines(lesson.answer);
+    const mismatch=expected.findIndex((line,index)=>
+      line!==actual[index]
+    );
+
+    correct=
+      mismatch===-1 &&
+      actual.length===expected.length;
+
+    message=mismatch!==-1 ?
+      `有效代码第${mismatch+1}行还需调整。检查方法名和常量。` :
+      "存在额外代码，本题只检查给定骨架。";
+  }else{
+    correct=normalize(value)===normalize(lesson.answer);
+  }
+
+  $("exerciseFeedback").className=
+    "feedback "+(correct?"goodText":"badText");
+
+  $("exerciseFeedback").textContent=correct ?
+    lesson.full ?
+    "✓ 骨架正确！这是结构检查，不是实际引擎执行结果。" :
+    "✓ 正确！再确认一次：这个方法是判断什么属性？" :
+    message ||
+    "暂时不匹配。检查大小写、点号和冒号，只填写题目要求的部分。";
+
+  if(correct){
+    r.exercise=true;
+  }
+
+  save();
+  renderNavigation();
+}
+
+$("checkAnswer").onclick=checkExercise;
+
+$("resetAnswer").onclick=()=>{
+  const lesson=currentLesson();
+  const input=lesson.full ?
+    $("codeInput") :
+    $("answerInput");
+
+  input.value=lesson.starter || "";
+  record().draft=input.value;
+  save();
+
+  $("exerciseFeedback").className="feedback muted";
+  $("exerciseFeedback").textContent=
+    "输入已重置，已有通过记录保留。";
+};
+
+["answerInput","codeInput"].forEach(id=>{
+  $(id).addEventListener("input",event=>{
+    record().draft=event.target.value;
+    save();
+  });
+});
+
+$("answerInput").addEventListener("keydown",event=>{
+  if(event.key==="Enter"){
+    checkExercise();
+  }
+});
+
+$("codeInput").addEventListener("keydown",event=>{
+  if(event.key==="Tab"){
+    event.preventDefault();
+
+    event.target.setRangeText(
+      "    ",
+      event.target.selectionStart,
+      event.target.selectionEnd,
+      "end"
+    );
+
+    event.target.dispatchEvent(new Event("input"));
+  }
+
+  if(event.key==="Enter" &&
+    (event.ctrlKey || event.metaKey)){
+    event.preventDefault();
+    checkExercise();
+  }
+});
+
+$("exportProgress").onclick=()=>{
+  save();
+
+  const blob=new Blob(
+    [JSON.stringify(state,null,2)],
+    {type:"application/json"}
+  );
+
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement("a");
+
+  link.href=url;
+  link.download="ygo-stage06-progress.json";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+
+  $("storageNotice").textContent=
+    "已请求下载本阶段学习记录。";
+};
+
+$("importProgress").onclick=()=>{
+  $("importFile").click();
+};
+
+$("importFile").addEventListener("change",async event=>{
+  const file=event.target.files[0];
+  if(!file)return;
+
+  try{
+    if(file.size>1024*1024){
+      throw new Error("记录文件过大。");
+    }
+
+    const imported=JSON.parse(await file.text());
+    const clean={
+      ...imported,
+      records:imported.records || {}
+    };
+
+    if(!clean.stageId || clean.stageId!==STAGE.id){
+      throw new Error("这不是第六阶段的记录文件。");
+    }
+
+    state=clean;
+    save();
+    openLesson(state.currentLessonId);
+    $("storageNotice").textContent="记录已导入。";
+  }catch(error){
+    $("storageNotice").textContent=
+      "导入失败："+error.message;
+  }finally{
+    event.target.value="";
+  }
+});
+
+$("clearProgress").onclick=()=>{
+  if(!confirm("清空第六阶段记录和草稿？其他阶段不受影响。")){
+    return;
+  }
+
+  state={
+    schemaVersion:1,
+    stageId:STAGE.id,
+    currentLessonId:lessons[0].id,
+    records:{}
+  };
+
+  save();
+  openLesson(state.currentLessonId);
+};
+
+
+/* ---------- 属性筛选实验台 ---------- */
+
+const initialCards=[
+  {
+    id:"A",name:"光战士",type:"MONSTER",
+    attribute:"LIGHT",race:"WARRIOR",level:4,
+    setcode:true,ableToHand:true,faceup:true
+  },
+  {
+    id:"B",name:"暗龙",type:"MONSTER",
+    attribute:"DARK",race:"DRAGON",level:5,
+    setcode:false,ableToHand:true,faceup:true
+  },
+  {
+    id:"C",name:"光魔法师",type:"MONSTER",
+    attribute:"LIGHT",race:"SPELLCASTER",level:3,
+    setcode:true,ableToHand:false,faceup:true
+  },
+  {
+    id:"D",name:"字段魔法",type:"SPELL",
+    attribute:"LIGHT",race:"NONE",level:0,
+    setcode:true,ableToHand:true,faceup:true
+  }
+];
+
+let labCards=initialCards.map(card=>({...card}));
+
+function filterState(card){
+  const mode=$("filterMode").value;
+
+  if(mode==="type"){
+    return card.type==="MONSTER";
+  }
+
+  if(mode==="attribute"){
+    return card.attribute==="LIGHT";
+  }
+
+  if(mode==="race"){
+    return card.race==="WARRIOR";
+  }
+
+  if(mode==="level"){
+    return card.level<=4;
+  }
+
+  if(mode==="setcode"){
+    return card.setcode;
+  }
+
+  if(mode==="hand"){
+    return card.ableToHand;
+  }
+
+  if(mode==="complex"){
+    return card.attribute==="LIGHT" &&
+      card.race==="WARRIOR";
+  }
+
+  return false;
+}
+
+function filterCode(){
+  const mode=$("filterMode").value;
+
+  if(mode==="type"){
+    return `function s.filter(c)
+    return c:IsType(TYPE_MONSTER)
+end`;
+  }
+
+  if(mode==="attribute"){
+    return `function s.filter(c)
+    return c:IsAttribute(ATTRIBUTE_LIGHT)
+end`;
+  }
+
+  if(mode==="race"){
+    return `function s.filter(c)
+    return c:IsRace(RACE_WARRIOR)
+end`;
+  }
+
+  if(mode==="level"){
+    return `function s.filter(c)
+    return c:IsLevelBelow(4)
+end`;
+  }
+
+  if(mode==="setcode"){
+    return `function s.filter(c)
+    return c:IsSetCard(0x1234)
+end`;
+  }
+
+  if(mode==="hand"){
+    return `function s.filter(c)
+    return c:IsAbleToHand()
+end`;
+  }
+
+  return `function s.filter(c)
+    return c:IsAttribute(ATTRIBUTE_LIGHT)
+        and c:IsRace(RACE_WARRIOR)
+end`;
+}
+
+function labCardLabel(card){
+  return [
+    `类型：${card.type==="MONSTER"?"怪兽":"魔法"}`,
+    `属性：${card.attribute==="LIGHT"?"光":"暗"}`,
+    `种族：${
+      card.race==="WARRIOR" ?
+      "战士" :
+      card.race==="DRAGON" ?
+      "龙" :
+      card.race==="SPELLCASTER" ?
+      "魔法师" :
+      "无"
+    }`,
+    `等级：${card.level}`,
+    `字段：${card.setcode?"0x1234":"其他"}`,
+    `可加入手牌：${card.ableToHand?"是":"否"}`
+  ].join("；");
+}
+
+function createSelect(labelText,value,choices,onchange){
+  const label=document.createElement("label");
+  label.appendChild(document.createTextNode(labelText));
+
+  const select=document.createElement("select");
+
+  choices.forEach(([optionValue,text])=>{
+    const option=document.createElement("option");
+    option.value=optionValue;
+    option.textContent=text;
+    select.appendChild(option);
+  });
+
+  select.value=value;
+  select.addEventListener("change",()=>{
+    onchange(select.value);
+  });
+
+  label.appendChild(select);
+  return label;
+}
+
+function renderLab(){
+  $("labCards").replaceChildren();
+
+  labCards.forEach(card=>{
+    const wrapper=document.createElement("div");
+    const match=filterState(card);
+
+    wrapper.className=
+      "labCard"+(match?" match":"");
+
+    const title=document.createElement("h3");
+    title.textContent=`${card.id} · ${card.name}`;
+    wrapper.appendChild(title);
+
+    const info=document.createElement("p");
+    info.className="small muted";
+    info.textContent=labCardLabel(card);
+    wrapper.appendChild(info);
+
+    wrapper.appendChild(createSelect(
+      "类型",
+      card.type,
+      [
+        ["MONSTER","怪兽"],
+        ["SPELL","魔法"]
+      ],
+      value=>{
+        card.type=value;
+        renderLab();
+      }
+    ));
+
+    wrapper.appendChild(createSelect(
+      "属性",
+      card.attribute,
+      [
+        ["LIGHT","光"],
+        ["DARK","暗"]
+      ],
+      value=>{
+        card.attribute=value;
+        renderLab();
+      }
+    ));
+
+    wrapper.appendChild(createSelect(
+      "种族",
+      card.race,
+      [
+        ["WARRIOR","战士族"],
+        ["DRAGON","龙族"],
+        ["SPELLCASTER","魔法师族"],
+        ["NONE","无"]
+      ],
+      value=>{
+        card.race=value;
+        renderLab();
+      }
+    ));
+
+    wrapper.appendChild(createSelect(
+      "等级",
+      String(card.level),
+      [
+        ["0","0"],
+        ["3","3"],
+        ["4","4"],
+        ["5","5"]
+      ],
+      value=>{
+        card.level=Number(value);
+        renderLab();
+      }
+    ));
+
+    wrapper.appendChild(createSelect(
+      "字段",
+      card.setcode?"yes":"no",
+      [
+        ["yes","0x1234"],
+        ["no","其他字段"]
+      ],
+      value=>{
+        card.setcode=value==="yes";
+        renderLab();
+      }
+    ));
+
+    wrapper.appendChild(createSelect(
+      "可加入手牌",
+      card.ableToHand?"yes":"no",
+      [
+        ["yes","可以"],
+        ["no","不可以"]
+      ],
+      value=>{
+        card.ableToHand=value==="yes";
+        renderLab();
+      }
+    ));
+
+    $("labCards").appendChild(wrapper);
+  });
+
+  const matched=labCards.filter(filterState);
+
+  $("labCode").textContent=filterCode();
+
+  $("labResult").innerHTML=box("筛选结果",[
+    ["匹配数量",matched.length],
+    ["匹配卡片",matched.length ?
+      matched.map(card=>card.name).join("、") :
+      "空"],
+    ["filter作用","只返回true或false"],
+    ["卡片是否移动","否"],
+    ["是否取对象","否"]
+  ]);
+}
+
+$("filterMode").addEventListener("change",renderLab);
+
+$("resetLab").onclick=()=>{
+  labCards=initialCards.map(card=>({...card}));
+  $("filterMode").value="type";
+  renderLab();
+};
+
+
+/* ---------- 术语字典 ---------- */
+
+const terms=[
+  ["IsType","判断卡片类型，如TYPE_MONSTER。"],
+  ["TYPE_MONSTER","怪兽卡类型常量。"],
+  ["IsAttribute","判断卡片属性，如ATTRIBUTE_LIGHT。"],
+  ["ATTRIBUTE_LIGHT","光属性常量。"],
+  ["IsRace","判断卡片种族，如RACE_WARRIOR。"],
+  ["RACE_WARRIOR","战士族常量。"],
+  ["IsLevel","判断等级是否等于指定数字。"],
+  ["IsLevelBelow","判断等级是否小于等于指定数字。"],
+  ["IsSetCard","判断卡片是否属于指定字段。"],
+  ["IsAbleToHand","判断当前卡片是否可以加入手牌，不负责实际移动。"],
+  ["and","要求两边条件都成立。"],
+  ["or","至少一边条件成立即可。"]
+];
+
+$("glossary").innerHTML=terms.map(([name,text])=>
+  `<div style="margin-top:14px">
+    <strong style="color:var(--blue)">${esc2(name)}</strong>
+    <div class="muted">${esc2(text)}</div>
+  </div>`
+).join("");
+
+openLesson(state.currentLessonId);
+renderLab();
+</script>
+<script src="progress-sync.js"></script>
+</body>
+</html>

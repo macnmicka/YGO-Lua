@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>YGO 效果脚本实验室</title>
+<style>
+:root{
+  --bg:#0b1020;--panel:#141d32;--line:#2b3956;
+  --text:#e4ecff;--muted:#a5b4d0;--blue:#7895ff;--green:#64dfad
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+font:15px/1.7 system-ui,"Microsoft YaHei",sans-serif}
+button,textarea{font:inherit}
+button{cursor:pointer;color:var(--text);background:#223153;
+border:1px solid var(--line);border-radius:8px;padding:8px 12px}
+button:hover{border-color:var(--blue)}
+button:disabled{opacity:.5;cursor:wait}
+header{padding:24px;border-bottom:1px solid var(--line)}
+h1{margin:0;font-size:25px}
+small,.muted{color:var(--muted)}
+.layout{display:grid;grid-template-columns:220px 1fr;min-height:85vh}
+nav{padding:16px;border-right:1px solid var(--line)}
+nav button{display:block;width:100%;text-align:left;margin-bottom:9px}
+nav button.active{background:#354c88}
+main{padding:22px;min-width:0}
+.grid{display:grid;grid-template-columns:minmax(260px,.8fr) minmax(360px,1.2fr);gap:18px}
+section{background:var(--panel);border:1px solid var(--line);
+border-radius:12px;padding:18px;margin-bottom:18px;min-width:0}
+h2,h3{margin-top:0}
+code{color:#9ee5c5}
+pre,textarea{font:13px/1.65 Consolas,monospace}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#080e1b;padding:14px;border-radius:8px}
+textarea{display:block;width:100%;height:440px;background:#080e1b;
+color:#d9e5ff;border:1px solid var(--line);padding:15px;resize:vertical;tab-size:4}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.primary{background:#4464c0}
+.pass{color:var(--green)}
+.fail{color:#ff9d9d}
+.note{border-left:3px solid var(--blue);padding-left:12px;color:var(--muted)}
+details{margin-top:14px}
+summary{cursor:pointer;color:#afc3ff}
+#results>div{padding:10px;border-bottom:1px solid var(--line)}
+@media(max-width:950px){.grid{grid-template-columns:1fr}}
+@media(max-width:650px){
+.layout{display:block}nav{display:flex;overflow:auto}nav button{min-width:170px;margin-right:8px}
+main{padding:12px}
+}
+</style>
+</head>
+<body>
+<header>
+<h1>YGO 效果脚本实验室</h1>
+<small>不是学 Lua 语法，而是练习效果注册、发动检查、支付、选对象和处理。</small>
+</header>
+<div class="layout">
+<nav id="nav"></nav>
+<main>
+<h2 id="title"></h2>
+<div class="grid">
+<div>
+<section>
+<h3>本课知识</h3>
+<div id="theory"></div>
+</section>
+<section>
+<h3>任务与测试场景</h3>
+<div id="task"></div>
+<details><summary>提示</summary><div id="hint"></div></details>
+</section>
+<section>
+<h3>本课参考写法</h3>
+<p class="muted">先完成练习，再展开对照。</p>
+<details><summary>查看参考答案</summary><pre id="answer"></pre></details>
+</section>
+</div>
+<div>
+<section>
+<h3>卡片脚本 · c100000001.lua</h3>
+<textarea id="editor" spellcheck="false" aria-label="卡片脚本编辑器"></textarea>
+<div class="actions">
+<button class="primary" id="run">▶ 运行场景测试</button>
+<button id="reset">重置本课代码</button>
+<button id="next">下一课 →</button>
+</div>
+<small>Ctrl / ⌘ + Enter 测试。代码草稿与通过记录保存在当前浏览器。</small>
+</section>
+<section>
+<h3>场景测试结果</h3>
+<div id="results" aria-live="polite">等待测试。</div>
+<h3 style="margin-top:18px">模拟调用轨迹</h3>
+<pre id="log">暂无记录。</pre>
+</section>
+</div>
+</div>
+<section>
+<h3>模拟器边界</h3>
+<p class="note">
+本实验台仅实现课程用到的 API。选卡使用预置顺序，不提供完整决斗界面。
+Reset 和次数限制检查的是注册配置，未模拟完整回合推进或次数消费。
+目标离场测试由场景显式修改关联状态。
+未实现的 API 会报错，不代表该 API 在 EDOPro 中不存在。
+</p>
+</section>
+</main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/fengari-web@0.1.4/dist/fengari-web.js"></script>
+<script>
+/* ---------- 教学用 Lua 模拟环境 ---------- */
+const MOCK = `
+-- 常量值仅用于教学环境；不要复制到真实卡片脚本。
+EFFECT_TYPE_ACTIVATE=1
+EFFECT_TYPE_SINGLE=2
+EVENT_FREE_CHAIN=10
+EFFECT_FLAG_CARD_TARGET=4
+EFFECT_UPDATE_ATTACK=20
+CATEGORY_DESTROY=1
+CATEGORY_ATKCHANGE=2
+CATEGORY_SEARCH=4
+CATEGORY_TOHAND=8
+LOCATION_MZONE=1
+LOCATION_DECK=2
+LOCATION_HAND=4
+POS_FACEUP=1
+TYPE_MONSTER=1
+REASON_EFFECT=1
+RESET_EVENT=256
+RESETS_STANDARD=512
+RESET_PHASE=1024
+PHASE_END=2048
+HINT_SELECTMSG=1
+HINTMSG_DESTROY=2
+HINTMSG_ATOHAND=3
+
+TRACE={}
+function trace(x)
+  if #TRACE<150 then TRACE[#TRACE+1]=x end
+end
+
+s={}
+function GetID() return s,100000001 end
+
+Effect={}
+local em={}
+em.__index=em
+function Effect.CreateEffect(c)
+  return setmetatable({owner=c},em)
+end
+local setters={
+  SetType="type",SetCode="code",SetCategory="category",
+  SetProperty="property",SetCost="cost",SetTarget="target",
+  SetOperation="operation",SetValue="value",SetReset="reset"
+}
+for method,field in pairs(setters) do
+  em[method]=function(self,v) self[field]=v end
+end
+function em:SetCountLimit(n,code) self.count=n self.countCode=code end
+function em:GetHandler() return self.handler or self.owner end
+
+local cm={}
+cm.__index=cm
+function Card(t)
+  t=t or {}
+  t.effects={}
+  if t.faceup==nil then t.faceup=true end
+  if t.related==nil then t.related=true end
+  if t.able==nil then t.able=true end
+  t.location=t.location or LOCATION_MZONE
+  t.controller=t.controller or 0
+  t.atk=t.atk or 1500
+  return setmetatable(t,cm)
+end
+function cm:RegisterEffect(e)
+  e.handler=self
+  table.insert(self.effects,e)
+  trace("RegisterEffect: "..tostring(e.code))
+end
+function cm:IsFaceup() return self.faceup end
+function cm:IsRelateToEffect(e) return self.related end
+function cm:IsLocation(loc) return (self.location & loc)~=0 end
+function cm:IsType(t) return ((self.cardtype or TYPE_MONSTER)&t)~=0 end
+function cm:IsAbleToHand() return self.able end
+function cm:GetAttack()
+  local v=self.atk
+  for _,e in ipairs(self.effects) do
+    if e.code==EFFECT_UPDATE_ATTACK then v=v+e.value end
+  end
+  return v
+end
+
+local gm={}
+gm.__index=gm
+function Group(cards) return setmetatable({cards=cards or {}},gm) end
+function gm:GetCount() return #self.cards end
+function gm:GetFirst() return self.cards[1] end
+function gm:Select(tp,min,max,exc)
+  local r={}
+  for _,c in ipairs(self.cards) do
+    if c~=exc and #r<max then r[#r+1]=c end
+  end
+  trace("Group.Select: "..#r.." 张")
+  return Group(r)
+end
+
+aux={}
+function aux.TRUE() return true end
+
+Duel={}
+function Duel.CheckLPCost(tp,n) return W.lp[tp+1]>=n end
+function Duel.PayLPCost(tp,n)
+  W.lp[tp+1]=W.lp[tp+1]-n
+  trace("PayLPCost: "..n)
+end
+function Duel.IsPlayerCanDraw(tp,n) return W.canDraw end
+function Duel.Draw(tp,n,reason)
+  W.drawn=W.drawn+n
+  trace("Draw: "..n)
+  return n
+end
+
+local function matching(f,tp,l1,l2,exc)
+  local r={}
+  for _,c in ipairs(W.cards) do
+    local loc=c.controller==tp and l1 or l2
+    if c~=exc and (c.location & loc)~=0 and f(c) then
+      r[#r+1]=c
+    end
+  end
+  return Group(r)
+end
+function Duel.GetMatchingGroup(f,tp,l1,l2,exc)
+  return matching(f,tp,l1,l2,exc)
+end
+function Duel.IsExistingMatchingCard(f,tp,l1,l2,n,exc)
+  return matching(f,tp,l1,l2,exc):GetCount()>=n
+end
+function Duel.IsExistingTarget(f,tp,l1,l2,n,exc)
+  return matching(f,tp,l1,l2,exc):GetCount()>=n
+end
+function Duel.SelectTarget(tp,f,p,l1,l2,min,max,exc)
+  local g=matching(f,p,l1,l2,exc):Select(tp,min,max,exc)
+  W.target=g:GetFirst()
+  W.selected=W.selected+1
+  trace("SelectTarget")
+  return g
+end
+function Duel.GetFirstTarget() return W.target end
+function Duel.SetOperationInfo(_,category,g,n,p,loc)
+  W.info=category
+  trace("SetOperationInfo: "..category)
+end
+function Duel.Hint(...) trace("Hint") end
+function Duel.Destroy(c,reason)
+  if not c then return 0 end
+  c.destroyed=true
+  trace("Destroy")
+  return 1
+end
+function Duel.SendtoHand(g,p,reason)
+  local n=0
+  for _,c in ipairs(g.cards) do
+    if c.able then
+      c.location=LOCATION_HAND
+      n=n+1
+    end
+  end
+  W.sent=n
+  trace("SendtoHand: "..n)
+  return n
+end
+function Duel.ConfirmCards(p,g)
+  W.confirmed=p
+  W.confirmCount=g:GetCount()
+  trace("ConfirmCards: 玩家 "..p.." 查看 "..g:GetCount().." 张")
+end
+
+function fresh()
+  W={
+    lp={8000,8000},canDraw=true,drawn=0,
+    cards={},selected=0,sent=0
+  }
+  local c=Card()
+  s.initial_effect(c)
+  assert(#c.effects==1,"应注册且仅注册一个发动效果")
+  return c.effects[1],c
+end
+function call(fn,e,chk)
+  assert(type(fn)=="function","缺少回调函数")
+  return fn(e,0,nil,0,0,nil,0,0,chk)
+end
+
+RESULTS={}
+function test(name,fn)
+  local ok,err=pcall(fn)
+  RESULTS[#RESULTS+1]={name=name,ok=ok,error=ok and "" or tostring(err)}
+end
+`;
+
+/* ---------- 课程公共代码 ---------- */
+const HEAD = `local s,id=GetID()\n`;
+const register = (lines) => HEAD + `
+function s.initial_effect(c)
+    local e1=Effect.CreateEffect(c)
+    e1:SetType(EFFECT_TYPE_ACTIVATE)
+    e1:SetCode(EVENT_FREE_CHAIN)
+${lines}
+    c:RegisterEffect(e1)
+end
+`;
+
+const drawTarget = `
+function s.target(e,tp,eg,ep,ev,re,r,rp,chk)
+    if chk==0 then return Duel.IsPlayerCanDraw(tp,1) end
+end
+`;
+const cost = `
+function s.cost(e,tp,eg,ep,ev,re,r,rp,chk)
+    if chk==0 then return Duel.CheckLPCost(tp,800) end
+    Duel.PayLPCost(tp,800)
+end
+`;
+const filter = `
+function s.filter(c)
+    return c:IsFaceup()
+end
+`;
+const destroyTarget = `
+function s.target(e,tp,eg,ep,ev,re,r,rp,chk)
+    if chk==0 then
+        return Duel.IsExistingTarget(s.filter,tp,0,LOCATION_MZONE,1,nil)
+    end
+    Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_DESTROY)
+    local g=Duel.SelectTarget(tp,s.filter,tp,0,LOCATION_MZONE,1,1,nil)
+    Duel.SetOperationInfo(0,CATEGORY_DESTROY,g,1,0,0)
+end
+`;
+const destroyOperation = `
+function s.operation(e,tp,eg,ep,ev,re,r,rp)
+    local tc=Duel.GetFirstTarget()
+    if tc and tc:IsRelateToEffect(e) then
+        Duel.Destroy(tc,REASON_EFFECT)
+    end
+end
+`;
+const targetReg = `    e1:SetCategory(CATEGORY_DESTROY)
+    e1:SetProperty(EFFECT_FLAG_CARD_TARGET)
+    e1:SetTarget(s.target)`;
+const baseChecks = `
+test("正确注册发动效果",function()
+  local e=fresh()
+  assert(e.type==EFFECT_TYPE_ACTIVATE,"SetType 应为 EFFECT_TYPE_ACTIVATE")
+  assert(e.code==EVENT_FREE_CHAIN,"SetCode 应为 EVENT_FREE_CHAIN")
+end)
+`;
+const targetChecks = `
+test("只有对方表侧怪兽时才可发动",function()
+  local e=fresh()
+  W.cards={Card{controller=0}}
+  assert(not call(e.target,e,0),"不能只因自己有怪兽就发动")
+  W.cards={Card{controller=1,faceup=false}}
+  assert(not call(e.target,e,0),"本卡不能选择里侧怪兽")
+  W.cards={Card{controller=1}}
+  assert(call(e.target,e,0),"有合法对象时应允许发动")
+  assert(W.selected==0,"chk==0 时不能真的选卡")
+end)
+test("选对象并登记处理信息",function()
+  local e=fresh()
+  local tc=Card{controller=1}
+  W.cards={tc}
+  call(e.target,e,1)
+  assert(e.property and (e.property&EFFECT_FLAG_CARD_TARGET)~=0,
+    "取对象效果必须声明 EFFECT_FLAG_CARD_TARGET")
+  assert(W.target==tc,"应选中对方怪兽")
+  assert(W.info==CATEGORY_DESTROY,"缺少破坏处理信息")
+end)
+`;
+const operationChecks = `
+test("对象仍关联时破坏",function()
+  local e=fresh()
+  local tc=Card{controller=1}
+  W.target=tc
+  call(e.operation,e)
+  assert(tc.destroyed,"未破坏合法对象")
+end)
+test("对象离场后不再关联：不得破坏",function()
+  local e=fresh()
+  local tc=Card{controller=1,related=false}
+  W.target=tc
+  call(e.operation,e)
+  assert(not tc.destroyed,"遗漏 IsRelateToEffect 检查")
+end)
+test("没有对象时安全结束",function()
+  local e=fresh()
+  call(e.operation,e)
+end)
+`;
+
+const lessons = [
+{
+title:"01 · 效果对象与注册",
+theory:`<p>卡片初始化时，引擎调用 <code>s.initial_effect(c)</code>。
+你需要创建 Effect、设置属性，再注册到卡上。</p>
+<p><code>local s,id=GetID()</code> 获取脚本表和卡号。
+<code>s</code> 不是场上的卡；<code>c</code> 才是 Card 对象。</p>
+<p>本课只建立发动效果的骨架，不要求实现完整卡片效果。</p>`,
+task:"注册一个 EFFECT_TYPE_ACTIVATE、EVENT_FREE_CHAIN 的效果。测试读取效果对象，而不是检查输出。",
+hint:"Effect.CreateEffect(c) → SetType → SetCode → c:RegisterEffect(e1)。",
+starter:HEAD+`
+function s.initial_effect(c)
+    -- TODO：创建、配置并注册效果
+end`,
+answer:register(""),
+tests:baseChecks
+},
+{
+title:"02 · target 的检查分支",
+theory:`<p>这里的 target 不仅用于“取对象”，也负责发动合法性检查和处理信息。</p>
+<p><code>chk==0</code> 是询问：现在能否发动？
+必须返回布尔结果，不能抽卡、支付 LP 或实际选卡。</p>
+<p>本课只练习 target 协议，不实现抽卡处理。</p>`,
+task:"只有玩家能够抽 1 张卡时才允许发动。检查阶段和正式 target 阶段都不能实际抽卡。",
+hint:"使用 Duel.IsPlayerCanDraw(tp,1)，不是 Duel.Draw。",
+starter:register("    e1:SetTarget(s.target)")+`
+function s.target(e,tp,eg,ep,ev,re,r,rp,chk)
+    -- TODO
+end`,
+answer:register("    e1:SetTarget(s.target)")+drawTarget,
+tests:`
+test("能够抽卡：允许发动",function()
+  local e=fresh()
+  assert(call(e.target,e,0)==true,"应返回 true")
+  assert(W.drawn==0,"检查阶段不能抽卡")
+end)
+test("禁止抽卡：不能发动",function()
+  local e=fresh()
+  W.canDraw=false
+  assert(call(e.target,e,0)==false,"应返回 false")
+end)
+test("正式 target 阶段也不能执行抽卡",function()
+  local e=fresh()
+  call(e.target,e,1)
+  assert(W.drawn==0,"抽卡应放在 operation")
+end)`
+},
+{
+title:"03 · cost：检查与实际支付",
+theory:`<p>cost 同样分两阶段：<code>chk==0</code> 检查能否支付，其余情况实际支付。</p>
+<p>不能在检查时扣 LP。检查可能被引擎多次调用。</p>
+<p>已支付的代价不会因为之后对象离场或效果被无效而自动退还。</p>`,
+task:"支付 800 LP。测试 799、800、8000 LP，并重复调用检查函数，确认没有提前扣血。",
+hint:"Duel.CheckLPCost(tp,800) 与 Duel.PayLPCost(tp,800) 分别负责检查和支付。",
+starter:register("    e1:SetCost(s.cost)")+`
+function s.cost(e,tp,eg,ep,ev,re,r,rp,chk)
+    -- TODO
+end`,
+answer:register("    e1:SetCost(s.cost)")+cost,
+tests:`
+test("799 LP 不足支付",function()
+  local e=fresh()
+  W.lp[1]=799
+  assert(call(e.cost,e,0)==false,"不足 800 应返回 false")
+end)
+test("恰好 800 LP 可以支付",function()
+  local e=fresh()
+  W.lp[1]=800
+  assert(call(e.cost,e,0)==true,"此处按普通 LP 代价检查")
+end)
+test("重复检查不得扣 LP",function()
+  local e=fresh()
+  for i=1,3 do assert(call(e.cost,e,0)) end
+  assert(W.lp[1]==8000,"检查阶段错误支付代价")
+end)
+test("实际支付只扣 800",function()
+  local e=fresh()
+  call(e.cost,e,1)
+  assert(W.lp[1]==7200,"实际支付金额错误")
+end)`
+},
+{
+title:"04 · 取对象与过滤器",
+theory:`<p>效果：以对方场上 1 只表侧表示怪兽为对象。</p>
+<p><code>tp</code> 是发动玩家。位置参数通常成对出现：
+先是该玩家区域，再是对方区域。因此 <code>tp,0,LOCATION_MZONE</code> 表示对方怪兽区。</p>
+<p>取对象效果要设置 <code>EFFECT_FLAG_CARD_TARGET</code>。
+检查与实际选择应使用一致的过滤条件。</p>
+<p><code>SetOperationInfo</code> 登记预计处理信息，本身不会执行破坏。</p>`,
+task:"补全 filter 和 target；无合法对象不能发动，正式选择阶段选择对方表侧怪兽，并登记破坏信息。",
+hint:"使用 IsExistingTarget 检查，SelectTarget 实际选择；两者都使用 s.filter。",
+starter:register(targetReg)+`
+function s.filter(c)
+    -- TODO
+end
+function s.target(e,tp,eg,ep,ev,re,r,rp,chk)
+    -- TODO
+end`,
+answer:register(targetReg)+filter+destroyTarget,
+tests:targetChecks
+},
+{
+title:"05 · operation 与对象关联",
+theory:`<p>发动时选到了对象，不代表处理时仍能影响那张卡。</p>
+<p>取得 <code>Duel.GetFirstTarget()</code> 后，检查
+<code>tc:IsRelateToEffect(e)</code>。对象离场等情况可能导致关联断开。</p>
+<p>本课效果只要求发动时对象为表侧怪兽，没有额外约定“处理时仍须表侧”。
+不要把所有发动过滤条件机械地再检查一遍，应依据具体卡文。</p>`,
+task:"补全破坏处理。测试正常对象、已失去关联的对象、没有对象三个场景。",
+hint:"if tc and tc:IsRelateToEffect(e) then Duel.Destroy(tc,REASON_EFFECT) end。",
+starter:register(targetReg+"\n    e1:SetOperation(s.operation)")+
+filter+destroyTarget+`
+function s.operation(e,tp,eg,ep,ev,re,r,rp)
+    -- TODO
+end`,
+answer:register(targetReg+"\n    e1:SetOperation(s.operation)")+
+filter+destroyTarget+destroyOperation,
+tests:operationChecks
+},
+{
+title:"06 · 临时加攻与 Reset",
+theory:`<p>给目标加攻，要把新的单体效果注册到目标卡上，而不是注册到发动卡上。</p>
+<p>效果来源使用 <code>Effect.CreateEffect(e:GetHandler())</code>。</p>
+<p>截至结束阶段的常见重置配置：
+<code>RESET_EVENT+RESETS_STANDARD+RESET_PHASE+PHASE_END</code>。</p>
+<p>本课独立练习 operation：场景直接提供已选中的对象，不实现发动与选对象流程。
+模拟器检查 Reset 配置，但不推进真实回合。</p>`,
+task:"让仍关联、表侧且在怪兽区的目标获得 800 攻击力，设置上述 Reset。里侧对象不处理。",
+hint:"EFFECT_TYPE_SINGLE → EFFECT_UPDATE_ATTACK → SetValue(800) → SetReset → tc:RegisterEffect。",
+starter:register("    e1:SetOperation(s.operation)")+`
+function s.operation(e,tp,eg,ep,ev,re,r,rp)
+    -- TODO
+end`,
+answer:register("    e1:SetOperation(s.operation)")+`
+function s.operation(e,tp,eg,ep,ev,re,r,rp)
+    local tc=Duel.GetFirstTarget()
+    if not tc or not tc:IsRelateToEffect(e)
+        or not tc:IsFaceup() or not tc:IsLocation(LOCATION_MZONE) then
+        return
+    end
+    local e1=Effect.CreateEffect(e:GetHandler())
+    e1:SetType(EFFECT_TYPE_SINGLE)
+    e1:SetCode(EFFECT_UPDATE_ATTACK)
+    e1:SetValue(800)
+    e1:SetReset(RESET_EVENT+RESETS_STANDARD+RESET_PHASE+PHASE_END)
+    tc:RegisterEffect(e1)
+end`,
+tests:`
+test("正确给目标加攻并设置重置",function()
+  local e,c=fresh()
+  local tc=Card{atk=1500}
+  W.target=tc
+  call(e.operation,e)
+  assert(tc:GetAttack()==2300,"目标应从 1500 变为 2300")
+  assert(#tc.effects==1,"应给目标注册一个效果")
+  local buff=tc.effects[1]
+  assert(buff.type==EFFECT_TYPE_SINGLE,"应使用单体效果")
+  assert(buff.owner==c,"效果来源应是发动卡")
+  assert(buff.reset==RESET_EVENT+RESETS_STANDARD+RESET_PHASE+PHASE_END,
+    "Reset 配置不正确")
+end)
+test("里侧对象不加攻",function()
+  local e=fresh()
+  W.target=Card{faceup=false}
+  call(e.operation,e)
+  assert(#W.target.effects==0,"里侧对象不应被加攻")
+end)
+test("关联断开不加攻",function()
+  local e=fresh()
+  W.target=Card{related=false}
+  call(e.operation,e)
+  assert(#W.target.effects==0,"关联断开后不能处理")
+end)`
+},
+{
+title:"07 · 非取对象的卡组检索",
+theory:`<p>本课效果：从卡组把 1 只可加入手牌的怪兽加入手牌，并给对方确认。</p>
+<p>这是非取对象检索，不设置 CARD_TARGET，不调用 SelectTarget。
+在处理时从当前卡组中选择。</p>
+<p><code>GetMatchingGroup</code> 返回引擎 Group，不是普通 Lua 数组。
+用 <code>GetCount()</code> 检查，再用 <code>Select()</code> 选择。</p>
+<p>真实复杂效果可能需要处理移动替代等情况；本课仅模拟正常加入手牌流程。</p>`,
+task:"实现 filter、target、operation。排除不能加入手牌的卡；处理时卡组已无合法卡，应安全结束。",
+hint:"filter 使用 IsType(TYPE_MONSTER) 和 IsAbleToHand()；成功加入手牌后 ConfirmCards(1-tp,g)。",
+starter:register(`    e1:SetCategory(CATEGORY_SEARCH+CATEGORY_TOHAND)
+    e1:SetTarget(s.target)
+    e1:SetOperation(s.operation)`)+`
+function s.filter(c)
+    -- TODO
+end
+function s.target(e,tp,eg,ep,ev,re,r,rp,chk)
+    -- TODO
+end
+function s.operation(e,tp,eg,ep,ev,re,r,rp)
+    -- TODO
+end`,
+answer:register(`    e1:SetCategory(CATEGORY_SEARCH+CATEGORY_TOHAND)
+    e1:SetTarget(s.target)
+    e1:SetOperation(s.operation)`)+`
+function s.filter(c)
+    return c:IsType(TYPE_MONSTER) and c:IsAbleToHand()
+end
+function s.target(e,tp,eg,ep,ev,re,r,rp,chk)
+    if chk==0 then
+        return Duel.IsExistingMatchingCard(
+            s.filter,tp,LOCATION_DECK,0,1,nil)
+    end
+    Duel.SetOperationInfo(0,CATEGORY_TOHAND,nil,1,tp,LOCATION_DECK)
+end
+function s.operation(e,tp,eg,ep,ev,re,r,rp)
+    local g=Duel.GetMatchingGroup(s.filter,tp,LOCATION_DECK,0,nil)
+    if g:GetCount()==0 then return end
+    Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_ATOHAND)
+    local sg=g:Select(tp,1,1,nil)
+    if Duel.SendtoHand(sg,nil,REASON_EFFECT)>0 then
+        Duel.ConfirmCards(1-tp,sg)
+    end
+end`,
+tests:`
+test("不能检索不可加入手牌的卡",function()
+  local e=fresh()
+  W.cards={Card{location=LOCATION_DECK,able=false}}
+  assert(not call(e.target,e,0),"必须检查 IsAbleToHand")
+end)
+test("检索怪兽并公开，且不是取对象",function()
+  local e=fresh()
+  local bad=Card{location=LOCATION_DECK,cardtype=2}
+  local good=Card{location=LOCATION_DECK}
+  W.cards={bad,good}
+  assert(call(e.target,e,0),"存在合法卡时应允许发动")
+  call(e.target,e,1)
+  assert(W.info==CATEGORY_TOHAND,"缺少加入手牌处理信息")
+  call(e.operation,e)
+  assert(good.location==LOCATION_HAND,"合法怪兽未加入手牌")
+  assert(bad.location==LOCATION_DECK,"不应检索非怪兽")
+  assert(W.sent==1,"应只加入一张")
+  assert(W.confirmed==1 and W.confirmCount==1,"应向对方公开检索卡")
+  assert(W.selected==0,"非取对象检索不应 SelectTarget")
+  assert(not e.property or (e.property&EFFECT_FLAG_CARD_TARGET)==0,
+    "不应设置取对象属性")
+end)
+test("处理时已无合法卡：安全结束",function()
+  local e=fresh()
+  call(e.operation,e)
+  assert(W.sent==0 and W.confirmed==nil,"没有卡时不应公开或移动")
+end)`
+},
+{
+title:"08 · 综合：支付 LP，取对象破坏",
+theory:`<p>设计目标：此卡名的这个效果 1 回合只能使用 1 次。
+支付 800 LP，以对方场上 1 只表侧怪兽为对象；破坏那只怪兽。</p>
+<p>本课用 <code>e1:SetCountLimit(1,id)</code> 配置同卡名共享的效果使用次数。
+它与不带共享编号的单个效果次数限制、以及“发动次数”限制不是同一概念。</p>
+<p>本实验台只验证次数限制配置，不实现真正的计次与重置。</p>
+<p>检查顺序、支付与效果处理要分开。处理失败不应退还代价。</p>`,
+task:"从空脚本完成 initial_effect、filter、cost、target、operation，通过全部场景。",
+hint:"组合前几课；特别注意 SetCountLimit、CARD_TARGET、chk==0 和 IsRelateToEffect。",
+starter:HEAD+`
+function s.initial_effect(c)
+    -- TODO
+end
+
+-- 在下方实现 filter / cost / target / operation
+`,
+answer:register(targetReg+`
+    e1:SetCountLimit(1,id)
+    e1:SetCost(s.cost)
+    e1:SetOperation(s.operation)`)+filter+cost+destroyTarget+destroyOperation,
+tests:baseChecks+targetChecks+operationChecks+`
+test("次数限制配置",function()
+  local e=fresh()
+  assert(e.count==1 and e.countCode==100000001,
+    "应使用 SetCountLimit(1,id)")
+end)
+test("完整流程：代价不会因对象离场而退还",function()
+  local e=fresh()
+  local tc=Card{controller=1}
+  W.cards={tc}
+  assert(call(e.cost,e,0),"应能支付")
+  assert(call(e.target,e,0),"应有合法对象")
+  assert(W.lp[1]==8000,"检查阶段不能支付")
+  call(e.cost,e,1)
+  call(e.target,e,1)
+  tc.related=false
+  call(e.operation,e)
+  assert(W.lp[1]==7200,"处理失败也不能退还代价")
+  assert(not tc.destroyed,"关联断开不能破坏")
+end)
+test("LP 不足时不能支付",function()
+  local e=fresh()
+  W.lp[1]=799
+  assert(not call(e.cost,e,0),"LP 不足应拒绝")
+end)`
+}
+];
+
+/* ---------- 页面与执行 ---------- */
+const $=id=>document.getElementById(id);
+let progress={current:0,done:[],drafts:{}};
+try{
+  const p=JSON.parse(localStorage.getItem("ygo-effect-lab-v1"));
+  if(p && typeof p==="object"){
+    progress.current=Number.isInteger(p.current)&&p.current>=0&&p.current<lessons.length?p.current:0;
+    progress.done=Array.isArray(p.done)?p.done.filter(n=>Number.isInteger(n)&&n>=0&&n<lessons.length):[];
+    progress.drafts=p.drafts&&typeof p.drafts==="object"?p.drafts:{};
+  }
+}catch{}
+function save(){
+  try{localStorage.setItem("ygo-effect-lab-v1",JSON.stringify(progress))}catch{}
+}
+function renderNav(){
+  $("nav").replaceChildren();
+  lessons.forEach((l,i)=>{
+    const b=document.createElement("button");
+    b.textContent=(progress.done.includes(i)?"✓ ":"")+l.title;
+    b.className=i===progress.current?"active":"";
+    b.onclick=()=>openLesson(i);
+    $("nav").appendChild(b);
+  });
+}
+function openLesson(i){
+  progress.current=i;
+  const l=lessons[i];
+  $("title").textContent=l.title;
+  $("theory").innerHTML=l.theory;
+  $("task").textContent=l.task;
+  $("hint").textContent=l.hint;
+  $("answer").textContent=l.answer;
+  $("editor").value=typeof progress.drafts[i]==="string"?progress.drafts[i]:l.starter;
+  $("results").textContent="等待测试。";
+  $("log").textContent="暂无记录。";
+  $("next").disabled=i===lessons.length-1;
+  document.querySelectorAll("details").forEach(d=>d.open=false);
+  renderNav();save();
+}
+$("editor").addEventListener("input",()=>{
+  progress.drafts[progress.current]=$("editor").value;save();
+});
+$("reset").onclick=()=>{
+  if(!confirm("恢复本课初始代码？"))return;
+  delete progress.drafts[progress.current];
+  openLesson(progress.current);
+};
+$("next").onclick=()=>openLesson(progress.current+1);
+
+function showResult(name,ok,error=""){
+  const row=document.createElement("div");
+  row.className=ok?"pass":"fail";
+  row.textContent=(ok?"✓ ":"✗ ")+name+(error?"\n"+error:"");
+  row.style.whiteSpace="pre-wrap";
+  $("results").appendChild(row);
+}
+
+function run(){
+  if(!window.fengari){
+    $("results").textContent="Lua 运行时加载失败，请检查网络并刷新。";
+    return;
+  }
+  $("run").disabled=true;
+  $("results").replaceChildren();
+  $("log").textContent="";
+  const {lua,lauxlib,lualib,to_luastring:ls,to_jsstring:js}=fengari;
+  let L;
+  let passed=0,total=0;
+  const trace=[];
+  try{
+    L=lauxlib.luaL_newstate();
+    lualib.luaL_openlibs(L);
+
+    function execute(source,name){
+      const status=lauxlib.luaL_loadbuffer(L,ls(source),null,ls(name));
+      if(status!==lua.LUA_OK)throw new Error(js(lua.lua_tostring(L,-1)));
+      if(lua.lua_pcall(L,0,0,0)!==lua.LUA_OK){
+        const err=lua.lua_tostring(L,-1);
+        throw new Error(err?js(err):"Lua 抛出了非字符串错误");
+      }
+    }
+    function bind(name,fn){
+      lua.lua_pushcfunction(L,fn);
+      lua.lua_setglobal(L,ls(name));
+    }
+    function stringAt(index){
+      const v=lua.lua_tostring(L,index);
+      return v?js(v):"";
+    }
+    bind("__result",()=>{
+      const name=stringAt(1),ok=lua.lua_toboolean(L,2),err=stringAt(3);
+      total++;if(ok)passed++;
+      showResult(name,ok,err);
+      return 0;
+    });
+    bind("__trace",()=>{
+      if(trace.length<150)trace.push(stringAt(1));
+      return 0;
+    });
+
+    // 普通死循环保护：限制 Lua 指令量。
+    // 这不是用于运行恶意代码的安全沙箱。
+    execute(`
+      local ticks=0
+      debug.sethook(function()
+        ticks=ticks+1
+        if ticks>2000 then error("超过指令预算：请检查无限循环",0) end
+      end,"",1000)
+    `,"@guard.lua");
+
+    execute(MOCK,"@teaching-engine.lua");
+    execute($("editor").value,"@c100000001.lua");
+    execute(lessons[progress.current].tests,"@scenarios.lua");
+    execute(`
+      for _,r in ipairs(RESULTS) do
+        __result(r.name,r.ok,r.error)
+      end
+      for _,line in ipairs(TRACE) do __trace(line) end
+    `,"@report.lua");
+
+    if(total>0&&passed===total){
+      if(!progress.done.includes(progress.current))progress.done.push(progress.current);
+      save();renderNav();
+    }
+    const summary=document.createElement("p");
+    summary.textContent=`本次通过 ${passed} / ${total} 个场景。`;
+    $("results").prepend(summary);
+  }catch(e){
+    showResult("脚本加载或执行失败",false,e.message);
+  }finally{
+    if(L)lua.lua_close(L);
+    $("log").textContent=trace.join("\n")||"暂无轨迹：请先修复脚本错误。";
+    $("run").disabled=false;
+  }
+}
+$("run").onclick=run;
+$("editor").addEventListener("keydown",e=>{
+  if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){e.preventDefault();run()}
+  if(e.key==="Tab"){
+    e.preventDefault();
+    const t=e.target,start=t.selectionStart,end=t.selectionEnd;
+    t.setRangeText("    ",start,end,"end");
+    t.dispatchEvent(new Event("input"));
+  }
+});
+openLesson(progress.current);
+</script>
+<script src="progress-sync.js"></script>
+</body>
+</html>

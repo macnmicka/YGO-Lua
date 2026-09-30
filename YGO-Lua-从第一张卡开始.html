@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>YGO Lua · 从第一张卡开始</title>
+<style>
+:root{
+  --bg:#0a1020;
+  --panel:#131e33;
+  --panel2:#18263f;
+  --line:#2a3c5d;
+  --text:#e6eeff;
+  --muted:#a8b9d5;
+  --blue:#86a5ff;
+  --green:#69e2b2;
+  --yellow:#ffd782;
+  --red:#ff9aa8;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:
+    radial-gradient(ellipse at top right,#172750,transparent 50%),
+    var(--bg);
+  color:var(--text);
+  font:15px/1.8 system-ui,"Microsoft YaHei",sans-serif;
+}
+button,input,textarea{font:inherit}
+button{
+  cursor:pointer;
+  padding:9px 14px;
+  border:1px solid var(--line);
+  border-radius:9px;
+  background:var(--panel2);
+  color:var(--text);
+}
+button:hover{border-color:var(--blue)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible,textarea:focus-visible{
+  outline:2px solid var(--blue);
+  outline-offset:3px;
+}
+.primary{
+  background:#486aca;
+  border-color:#6485e6;
+  color:white;
+}
+.shell{
+  display:grid;
+  grid-template-columns:255px minmax(0,1fr);
+  min-height:100vh;
+}
+aside{
+  position:sticky;
+  top:0;
+  height:100vh;
+  overflow:auto;
+  padding:22px 16px;
+  border-right:1px solid var(--line);
+  background:#0c1425;
+}
+.brand{font-size:21px;font-weight:800}
+.subtitle{color:var(--muted);font-size:12px}
+.progressBox{
+  margin:20px 0;
+  padding:13px;
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:12px;
+}
+.progressTitle{display:flex;justify-content:space-between;font-size:13px}
+.progressTrack{
+  height:7px;
+  background:#080d18;
+  border-radius:10px;
+  margin-top:10px;
+  overflow:hidden;
+}
+.progressTrack div{
+  height:100%;
+  background:linear-gradient(90deg,var(--blue),var(--green));
+  transition:width .3s;
+}
+nav{display:grid;gap:7px}
+nav button{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  text-align:left;
+  padding:10px;
+  background:transparent;
+  border-color:transparent;
+  font-size:13px;
+}
+nav button.active{
+  background:#22375e;
+  border-color:#5d7fcc;
+}
+nav .num{color:var(--muted);min-width:21px}
+nav .tick{margin-left:auto;color:var(--green)}
+main{
+  min-width:0;
+  width:100%;
+  max-width:1400px;
+  margin:0 auto;
+  padding:30px;
+}
+.hero{
+  padding:24px;
+  border:1px solid var(--line);
+  border-radius:17px;
+  background:linear-gradient(120deg,#1d3053,#132139);
+  margin-bottom:20px;
+}
+.tag{
+  color:var(--green);
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.08em;
+}
+h1{margin:8px 0;font-size:29px;line-height:1.4}
+h2{font-size:18px;margin:0 0 14px}
+h3{font-size:15px;margin:16px 0 8px}
+p{margin:9px 0}
+.muted{color:var(--muted)}
+.grid{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:20px;
+  align-items:start;
+}
+.panel{
+  padding:20px;
+  border:1px solid var(--line);
+  background:var(--panel);
+  border-radius:14px;
+  margin-bottom:20px;
+  min-width:0;
+}
+.lessonText{color:#d0def5}
+.lessonText strong{color:white}
+code{
+  color:#a5edcf;
+  background:#0b1526;
+  padding:2px 5px;
+  border-radius:5px;
+  font-family:Consolas,monospace;
+}
+pre{
+  background:#080f1d;
+  color:#d6e5ff;
+  border:1px solid #263958;
+  padding:15px;
+  border-radius:10px;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  font:14px/1.8 Consolas,monospace;
+}
+pre code{background:none;padding:0;color:inherit}
+.note{
+  padding:12px 14px;
+  border-left:3px solid var(--blue);
+  border-radius:0 8px 8px 0;
+  background:#182943;
+  color:#c5d6f2;
+  font-size:13px;
+  margin:15px 0;
+}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+.visual{
+  min-height:205px;
+  padding:18px;
+  background:#0b1424;
+  border:1px dashed #395277;
+  border-radius:12px;
+}
+.visualTitle{font-weight:700;color:var(--yellow);margin-bottom:12px}
+.object{
+  padding:13px;
+  background:#182943;
+  border:1px solid #3c567e;
+  border-radius:10px;
+  margin-bottom:10px;
+}
+.object b{display:block;color:var(--blue);margin-bottom:5px}
+.fields{
+  display:grid;
+  grid-template-columns:auto 1fr;
+  gap:5px 15px;
+  font-size:13px;
+}
+.fields span:nth-child(odd){color:var(--muted)}
+.bigNumber{font-size:29px;color:var(--green);font-weight:800}
+.stepCount{font-size:12px;color:var(--muted)}
+.caption{
+  padding:12px 0 0;
+  min-height:62px;
+  color:#c8d9f7;
+  font-size:14px;
+}
+.option{
+  width:100%;
+  text-align:left;
+  display:block;
+  margin-top:9px;
+}
+.option.good{border-color:var(--green);background:#173d34}
+.option.bad{border-color:var(--red);background:#412b3b}
+.feedback{
+  min-height:30px;
+  padding-top:12px;
+  font-size:14px;
+}
+.goodText{color:var(--green)}
+.badText{color:var(--red)}
+textarea,input[type=text]{
+  width:100%;
+  padding:12px;
+  color:#e6efff;
+  background:#090f1d;
+  border:1px solid #3a5276;
+  border-radius:9px;
+  font:14px/1.8 Consolas,monospace;
+}
+textarea{min-height:230px;resize:vertical;tab-size:4}
+details{margin-top:13px}
+summary{cursor:pointer;color:var(--blue)}
+.footerNav{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:14px;
+  margin-bottom:25px;
+}
+.badge{color:var(--green);font-size:13px}
+.glossaryItem{margin-bottom:14px}
+.glossaryItem strong{color:var(--blue)}
+.small{font-size:12px}
+#storageNotice{font-size:12px;color:var(--yellow)}
+@media(max-width:1100px){.grid{grid-template-columns:1fr}}
+@media(max-width:700px){
+  .shell{display:block}
+  aside{position:static;height:auto;padding:14px}
+  nav{display:flex;overflow:auto}
+  nav button{min-width:165px}
+  .progressBox{margin:12px 0}
+  main{padding:15px}
+  h1{font-size:24px}
+  .hero,.panel{padding:17px}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside>
+  <div class="brand">✦ YGO Lua 学习室</div>
+  <div class="subtitle">先看懂，再动手，最后独立写卡</div>
+
+  <div class="progressBox">
+    <div class="progressTitle">
+      <span>第一阶段 · 基础篇</span>
+      <strong id="progressText">0 / 12</strong>
+    </div>
+    <div class="progressTrack"><div id="progressBar"></div></div>
+  </div>
+
+  <nav id="nav" aria-label="课程目录"></nav>
+
+  <details>
+    <summary>学习记录</summary>
+    <p class="small muted">观察进度、练习答案和完成记录保存在当前浏览器。</p>
+    <button id="clearProgress">清空学习记录</button>
+  </details>
+  <p id="storageNotice"></p>
+</aside>
+
+<main>
+  <header class="hero">
+    <div class="tag" id="lessonTag"></div>
+    <h1 id="lessonTitle"></h1>
+    <div class="muted" id="lessonGoal"></div>
+  </header>
+
+  <div class="grid">
+    <div>
+      <section class="panel">
+        <h2>① 先理解一个小知识点</h2>
+        <div id="lessonText" class="lessonText"></div>
+        <pre id="example"></pre>
+        <div class="note" id="takeaway"></div>
+      </section>
+
+      <section class="panel">
+        <h2>② 点击观察</h2>
+        <p class="small muted">
+          教学示意：这里按预设步骤展示对象变化，不执行任意 Lua。
+        </p>
+        <div class="visual" id="visual"></div>
+        <pre id="stepCode"></pre>
+        <div class="caption" id="stepCaption" aria-live="polite"></div>
+        <div class="actions">
+          <button id="previousStep">← 上一步</button>
+          <button id="nextStep" class="primary">观察下一步 →</button>
+        </div>
+        <div class="stepCount" id="stepCount"></div>
+      </section>
+    </div>
+
+    <div>
+      <section class="panel">
+        <h2>③ 确认你理解了</h2>
+        <p id="question"></p>
+        <div id="options"></div>
+        <div class="feedback" id="quizFeedback" aria-live="polite"></div>
+      </section>
+
+      <section class="panel">
+        <h2>④ 只写一点点</h2>
+        <p id="exercisePrompt"></p>
+        <pre id="exerciseTemplate"></pre>
+        <label for="answerInput" class="small muted" id="inputLabel">
+          在下方输入答案
+        </label>
+        <input id="answerInput" type="text" autocomplete="off" spellcheck="false">
+        <textarea id="codeInput" spellcheck="false" hidden
+          aria-label="完整脚本练习"></textarea>
+
+        <div class="actions">
+          <button class="primary" id="checkAnswer">检查练习</button>
+          <button id="resetAnswer">重新填写</button>
+        </div>
+        <div class="feedback" id="exerciseFeedback" aria-live="polite"></div>
+
+        <details id="hintDetails">
+          <summary>给我一个提示</summary>
+          <p id="exerciseHint"></p>
+        </details>
+        <details id="solutionDetails">
+          <summary>查看参考答案</summary>
+          <pre id="exerciseSolution"></pre>
+          <p class="small muted">查看答案不会自动完成练习，请自己输入并检查。</p>
+        </details>
+      </section>
+
+      <section class="panel">
+        <h2>本课完成条件</h2>
+        <div id="checklist"></div>
+        <p class="small muted">
+          可以自由切换课程。建议完成三个条件后再继续。
+        </p>
+      </section>
+    </div>
+  </div>
+
+  <div class="footerNav">
+    <button id="previousLesson">← 上一课</button>
+    <span class="badge" id="lessonStatus"></span>
+    <button id="nextLesson" class="primary">下一课 →</button>
+  </div>
+
+  <section class="panel">
+    <details>
+      <summary>随时可查：本阶段术语小字典</summary>
+      <div id="glossary"></div>
+    </details>
+  </section>
+
+  <p class="muted small">
+    本课程采用现代 EDOPro 常见脚本风格。示例文件名为 c100000001.lua。
+    自定义卡还需要对应数据库记录，脚本放入客户端配置的 script 搜索路径，
+    不是卡组目录。最终效果需要在实际引擎中验证。
+  </p>
+</main>
+</div>
+
+<script>
+"use strict";
+
+/* ---------- 安全显示文本 ---------- */
+function escapeHTML(value){
+  return String(value).replace(/[&<>"']/g,ch=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  })[ch]);
+}
+
+function box(title,fields){
+  return `<div class="object">
+    <b>${escapeHTML(title)}</b>
+    <div class="fields">${
+      fields.map(([k,v])=>
+        `<span>${escapeHTML(k)}</span><span>${escapeHTML(v)}</span>`
+      ).join("")
+    }</div>
+  </div>`;
+}
+
+function card(atk=1500){
+  return box("Card 对象：训练战士",[
+    ["卡片编号","100000001"],
+    ["基础攻击力","1500"],
+    ["当前攻击力",atk],
+    ["当前防御力","1000"]
+  ]);
+}
+
+function effect(type="未设置",code="未设置",value="未设置",registered=false){
+  return box("Effect 对象：e1",[
+    ["来源卡片","训练战士"],
+    ["类型",type],
+    ["作用",code],
+    ["数值",value],
+    ["注册状态",registered?"已注册到 c":"未注册"]
+  ]);
+}
+
+const completeScript=`local s,id=GetID()
+
+function s.initial_effect(c)
+    local e1=Effect.CreateEffect(c)
+    e1:SetType(EFFECT_TYPE_SINGLE)
+    e1:SetCode(EFFECT_UPDATE_ATTACK)
+    e1:SetValue(500)
+    c:RegisterEffect(e1)
+end`;
+
+function step(code,caption,html){
+  return {code,caption,html};
+}
+
+const lessons=[
+{
+  title:"卡片数据与效果脚本",
+  goal:"先分清：卡片上写着什么，与引擎实际执行什么。",
+  text:`
+    <p>一张自定义卡通常不只有 Lua 文件。</p>
+    <p><strong>数据库</strong>保存卡名、基础攻防、类型和显示出来的效果文字。</p>
+    <p><strong>Lua 脚本</strong>描述效果应该怎样实现。</p>
+    <p>数据库写“攻击力上升500”，引擎不会自动把这句话翻译成效果。</p>
+  `,
+  example:`数据库：
+  卡名：训练战士
+  基础攻击力：1500
+  效果文字：这张卡的攻击力上升500。
+
+脚本：
+  创建并注册一个攻击力上升500的效果。`,
+  takeaway:"效果文字是说明，Lua 脚本是实现。二者需要一致。",
+  steps:[
+    step("基础攻击力：1500","先看数据库给出的基础数值。",
+      box("数据库记录",[["基础攻击力","1500"],["效果文字","攻击力上升500"]])
+      +card(1500)),
+    step("只修改效果文字：攻击力上升1000。",
+      "只改文字不会自动生成加攻逻辑。",
+      box("修改后的数据库文字",[["效果文字","攻击力上升1000"]])
+      +box("脚本状态",[["加攻逻辑","尚未实现"]])+card(1500)),
+    step("让脚本注册攻击力上升500的效果。",
+      "在本教学场景中，效果应用后当前攻击力是2000。显示文字也应改回与实现一致。",
+      box("效果实现",[["攻击力加成","+500"]])+card(2000))
+  ],
+  question:"想把基础攻击力从1500改为1800，通常应该修改哪里？",
+  options:["数据库中的基础攻击力字段","initial_effect 的名字","Lua 的 end 关键字"],
+  correct:0,
+  explanation:"基础攻击力属于卡片数据。动态加攻效果才由脚本实现。",
+  prompt:"数据库基础攻击力1500，脚本实际实现加攻500。没有其他影响时，当前攻击力是多少？",
+  template:"1500 + 500 = ____",
+  answers:["2000"],
+  solution:"2000",
+  hint:"把基础攻击力和本例加成相加。"
+},
+{
+  title:"谁来调用卡片脚本",
+  goal:"认识 initial_effect：它负责安装效果，不是每次发动时处理效果。",
+  text:`
+    <p>普通 Lua 中，你可能自己写 <code>hello()</code> 调用函数。</p>
+    <p>写卡时，一些约定好的函数由<strong>游戏引擎调用</strong>。</p>
+    <p><code>initial_effect</code> 是初始化效果的入口。
+    引擎初始化卡片实例时，通过它为卡片登记效果。</p>
+    <p>暂时把它理解为“为这张卡安装能力”。</p>
+  `,
+  example:`function s.initial_effect(c)
+    -- 在这里创建并注册效果
+end`,
+  takeaway:"initial_effect 的职责是初始化效果，不等于效果的发动或处理。",
+  steps:[
+    step("-- 引擎准备初始化卡片",
+      "引擎准备好卡片实例和对应的脚本环境。",
+      box("引擎",[["任务","初始化训练战士"]])),
+    step("function s.initial_effect(c)",
+      "脚本定义这个入口函数。写下定义本身不等于执行函数体。",
+      box("脚本表 s",[["initial_effect","一个已定义的函数"]])),
+    step("-- 引擎调用 initial_effect，并传入卡片对象",
+      "现在引擎调用入口，函数体中的效果注册代码才会执行。",
+      box("调用状态",[["入口","initial_effect"],["传入参数","训练战士的 Card 对象"]]))
+  ],
+  question:"initial_effect 的主要职责是什么？",
+  options:["每次点击发动都直接抽卡","初始化并注册卡片效果","把 Lua 翻译成效果文字"],
+  correct:1,
+  explanation:"它负责登记效果。发动后的处理要交给后续学习的处理函数。",
+  prompt:"填写初始化效果入口的函数名。",
+  template:"function s.____(c)\nend",
+  answers:["initial_effect"],
+  solution:"initial_effect",
+  hint:"名字由 initial 和 effect 用下划线连接。"
+},
+{
+  title:"GetID、s 与 id",
+  goal:"不再把脚本开头当成咒语，理解两个变量各自存什么。",
+  text:`
+    <p><code>GetID()</code> 是脚本环境提供的辅助函数，不是 Lua 自带函数。</p>
+    <p>在这种写法中，它返回<strong>脚本表</strong>和<strong>卡片编号</strong>。</p>
+    <p><code>s</code> 用来存放本脚本的函数等内容；
+    <code>id</code> 是编号数字。</p>
+    <p><strong>s 不是场上的卡片。</strong></p>
+  `,
+  example:"local s,id=GetID()",
+  takeaway:"s 是脚本表；id 是卡片编号。这里用到了 Lua 的多返回值赋值。",
+  steps:[
+    step("GetID()","先调用脚本环境提供的辅助函数。",
+      box("当前脚本",[["文件名","c100000001.lua"]])),
+    step("local s,id=GetID()","第一个返回值交给 s，第二个返回值交给 id。",
+      box("变量 s",[["内容","当前脚本表"]])
+      +box("变量 id",[["内容","数字 100000001"]])),
+    step("function s.initial_effect(c)\nend",
+      "在脚本表 s 中定义名为 initial_effect 的函数。",
+      box("脚本表 s",[["initial_effect","函数"]])
+      +box("变量 id",[["值","100000001"]]))
+  ],
+  question:"s 是什么？",
+  options:["当前玩家","场上的一张卡","当前卡片脚本使用的表"],
+  correct:2,
+  explanation:"s 是脚本表，用来组织函数等内容。具体卡片对象由 c 等变量引用。",
+  prompt:"填写获取脚本表和卡号的函数调用。",
+  template:"local s,id=____",
+  answers:["GetID()"],
+  solution:"GetID()",
+  hint:"注意大小写：GetID，后面加调用用的括号。"
+},
+{
+  title:"参数 c：具体的一张卡",
+  goal:"理解 Card 对象与卡片编号的区别。",
+  text:`
+    <p><code>initial_effect(c)</code> 中的 <code>c</code>
+    是引擎传入的 <strong>Card 对象</strong>。</p>
+    <p>它代表正在初始化的具体卡片实例，不是卡号数字。</p>
+    <p>两张同名同编号的卡，可以具有不同的当前攻击力、位置和状态，
+    因为它们是不同的实例。</p>
+    <p>参数名 c 是常见习惯，不是让 Lua 自动找卡的特殊关键字。</p>
+  `,
+  example:`function s.initial_effect(c)
+    -- c：本次正在初始化的卡片对象
+    -- id：卡片编号
+    -- s：脚本表
+end`,
+  takeaway:"编号说明“是哪一种卡”，Card 对象代表“具体哪一张卡”。",
+  steps:[
+    step("id = 100000001","两张同名卡可以有相同的编号。",
+      box("实例 A",[["编号","100000001"],["当前攻击力","1500"]])
+      +box("实例 B",[["编号","100000001"],["当前攻击力","2300"]])),
+    step("-- 初始化实例 A 时，参数 c 引用实例 A",
+      "这次入口函数接收到的是实例 A。",
+      box("本次参数 c",[["引用","实例 A"],["当前攻击力","1500"]])),
+    step("-- 初始化实例 B 时，参数 c 引用实例 B",
+      "同一个入口也会用于另一张卡，但这次接收到的是实例 B。",
+      box("本次参数 c",[["引用","实例 B"],["当前攻击力","2300"]]))
+  ],
+  question:"同编号的两张怪兽卡，一定是同一个 Card 对象吗？",
+  options:["是，因为卡号相同","不是，它们可以是两个不同实例","只有攻击力相同才是同一个对象"],
+  correct:1,
+  explanation:"相同编号不代表相同实例。每张卡有自己的状态。",
+  prompt:"本课采用标准命名。补出表示正在初始化的 Card 对象的参数名。",
+  template:"function s.initial_effect(____)\nend",
+  answers:["c"],
+  solution:"c",
+  hint:"使用本课约定的单字母参数名 c。"
+},
+{
+  title:"第一个方法：GetAttack",
+  goal:"通过冒号调用卡片的方法，读取当前攻击力。",
+  text:`
+    <p>对象不只是一个名字，还能通过方法提供数据或接受操作。</p>
+    <p><code>c:GetAttack()</code> 表示：向卡片对象 c 读取当前攻击力。</p>
+    <p>这里的冒号是 Lua 的方法调用语法，会把 c 作为接收对象传入。</p>
+    <p><code>GetAttack</code> 只读取数值，不会增加攻击力。</p>
+  `,
+  example:`local atk=c:GetAttack()
+
+-- atk 保存读取到的数字
+-- c 仍然是卡片对象`,
+  takeaway:"c:GetAttack() 返回数字；它不修改卡片。",
+  steps:[
+    step("-- 当前卡片攻击力为1500","先观察卡片现有状态。",card(1500)),
+    step("local atk=c:GetAttack()","读取结果保存到局部变量 atk。",
+      card(1500)+box("局部变量",[["atk","1500"]])),
+    step("-- 此次读取已经结束",
+      "读取操作没有改变卡片攻击力。atk 保存的是这次读取的数值，不会自动实时更新。",
+      box("结果检查",[["卡片当前攻击力","1500"],["atk 的值","1500"],["卡片被修改了吗","没有"]]))
+  ],
+  question:"执行 local atk=c:GetAttack() 后，atk 通常保存什么？",
+  options:["卡片对象本身","攻击力数字","一个新的效果对象"],
+  correct:1,
+  explanation:"GetAttack 返回当前攻击力数值，赋值后 atk 保存这个数字。",
+  prompt:"填写读取卡片 c 当前攻击力的表达式。",
+  template:"local atk=____",
+  answers:["c:GetAttack()"],
+  solution:"c:GetAttack()",
+  hint:"对象 c、冒号、方法名 GetAttack、括号。"
+},
+{
+  title:"Card 与 Effect 的区别",
+  goal:"认识第二类对象：效果对象。",
+  text:`
+    <p><strong>Card</strong> 表示具体的一张卡。</p>
+    <p><strong>Effect</strong> 表示一个效果对象，里面可以配置效果类型、作用和数值。</p>
+    <p>一张卡可以注册多个效果，因此“卡片”和“效果”不是同一种东西。</p>
+    <p>常见变量名 <code>e1</code>、<code>e2</code> 只是作者取的名字，
+    并不是 Lua 自带关键字。</p>
+  `,
+  example:`c   -- 常用来引用卡片对象
+
+e1  -- 常用来引用第一个效果对象
+e2  -- 常用来引用另一个效果对象`,
+  takeaway:"卡片是承载实例，效果对象描述它具有的某项效果。",
+  steps:[
+    step("-- 先有卡片对象", "c 引用具体的训练战士。",card(1500)),
+    step("-- 再准备一个效果对象",
+      "e1 可以描述一个加攻效果；它和 c 是不同对象。",
+      card(1500)+effect()),
+    step("-- 一张卡可以具有不止一个效果",
+      "这里仅展示结构关系，不实际应用第二个效果。",
+      box("Card：训练战士",[["效果 1","攻击力变化"],["效果 2","另一个独立效果"]]))
+  ],
+  question:"e1 这个名字有什么特殊含义？",
+  options:["引擎只接受这个名字","它必须是卡片编号","它只是常见的变量命名习惯"],
+  correct:2,
+  explanation:"e1 是普通变量名。重要的是变量实际保存的对象。",
+  prompt:"本课命名中，c 表示 Card 对象，e1 表示哪一类对象？填写英文类型名。",
+  template:"c  → Card\ne1 → ____",
+  answers:["Effect"],
+  solution:"Effect",
+  hint:"效果对象的英文类型名是 Effect。"
+},
+{
+  title:"创建效果：CreateEffect",
+  goal:"亲手读懂创建效果对象的一行代码。",
+  text:`
+    <p><code>Effect.CreateEffect(c)</code> 创建一个新的效果对象，
+    并以 c 作为效果的来源卡片。</p>
+    <p><code>local e1=...</code> 将返回的新对象保存到 e1。</p>
+    <p>只创建对象，还没有配置具体作用，也没有把它注册到卡片上。</p>
+    <p>这里使用点号调用 <code>Effect.CreateEffect</code>；
+    后面配置实例时会用 <code>e1:SetType(...)</code> 这样的冒号调用。</p>
+  `,
+  example:"local e1=Effect.CreateEffect(c)",
+  takeaway:"CreateEffect 的结果是一个新效果对象，不是立即生效的加攻。",
+  steps:[
+    step("-- 创建前","目前只有卡片，尚未创建 e1。",card(1500)),
+    step("local e1=Effect.CreateEffect(c)",
+      "得到一个来源为 c 的新效果对象，并让变量 e1 引用它。",
+      card(1500)+effect()),
+    step("-- 尚未配置，也尚未注册",
+      "卡片攻击力仍然是1500，因为我们还没说明效果要做什么。",
+      effect()+box("卡片状态",[["当前攻击力","1500"],["新增已注册效果","0"]]))
+  ],
+  question:"执行 Effect.CreateEffect(c) 会立刻让 c 加攻吗？",
+  options:["不会，只创建效果对象","会，默认增加500","会，默认翻倍"],
+  correct:0,
+  explanation:"创建、配置和注册是不同步骤。",
+  prompt:"补全创建效果对象的表达式。",
+  template:"local e1=____",
+  answers:["Effect.CreateEffect(c)"],
+  solution:"Effect.CreateEffect(c)",
+  hint:"注意 CreateEffect 属于 Effect，传入来源卡片 c。"
+},
+{
+  title:"设置类型：SetType",
+  goal:"认识常量，配置一个作用于单张卡的效果。",
+  text:`
+    <p><code>e1:SetType(...)</code> 设置效果类型。</p>
+    <p>本例的自身加攻使用 <code>EFFECT_TYPE_SINGLE</code>，
+    表示单体效果类型。</p>
+    <p>这个全大写的名字是引擎提供的<strong>常量</strong>，不是函数，
+    因此后面不用再写一对调用括号。</p>
+    <p>不要把 SINGLE 理解为“一回合只能用一次”。</p>
+  `,
+  example:`local e1=Effect.CreateEffect(c)
+e1:SetType(EFFECT_TYPE_SINGLE)`,
+  takeaway:"SetType 配置类型；EFFECT_TYPE_SINGLE 是常量，不是次数限制。",
+  steps:[
+    step("local e1=Effect.CreateEffect(c)","刚创建时，类型还没设置。",effect()),
+    step("e1:SetType(EFFECT_TYPE_SINGLE)",
+      "把类型字段设置为单体效果。",
+      effect("EFFECT_TYPE_SINGLE")),
+    step("-- 只设置类型，还没有指定作用",
+      "现在仍不知道它是加攻还是其他效果，卡片数值没有变化。",
+      effect("EFFECT_TYPE_SINGLE")+card(1500))
+  ],
+  question:"EFFECT_TYPE_SINGLE 在这里是什么？",
+  options:["一个必须调用的函数","引擎提供的效果类型常量","攻击力数字"],
+  correct:1,
+  explanation:"它是效果类型常量，作为参数传给 SetType。",
+  prompt:"补出单体效果类型常量。",
+  template:"e1:SetType(____)",
+  answers:["EFFECT_TYPE_SINGLE"],
+  solution:"EFFECT_TYPE_SINGLE",
+  hint:"完整拼写是 EFFECT_TYPE_SINGLE，不要给它加括号。"
+},
+{
+  title:"设置作用：SetCode",
+  goal:"告诉效果对象：本例要修改攻击力。",
+  text:`
+    <p>在这个单体数值效果中，<code>SetCode</code> 配置具体的效果作用。</p>
+    <p><code>EFFECT_UPDATE_ATTACK</code> 表示攻击力增减效果。</p>
+    <p>它不是卡片编号。不要因为名字里有 Code，就把它当成 id。</p>
+    <p>以后遇到发动或诱发效果时，SetCode 也会用于指定事件；
+    现在先掌握这一种用法。</p>
+  `,
+  example:`e1:SetType(EFFECT_TYPE_SINGLE)
+e1:SetCode(EFFECT_UPDATE_ATTACK)`,
+  takeaway:"本课的 SetCode 指定“攻击力增减”，数值由下一课配置。",
+  steps:[
+    step("e1:SetType(EFFECT_TYPE_SINGLE)","效果类型已经明确。",effect("EFFECT_TYPE_SINGLE")),
+    step("e1:SetCode(EFFECT_UPDATE_ATTACK)",
+      "现在知道这个效果负责攻击力增减。",
+      effect("EFFECT_TYPE_SINGLE","EFFECT_UPDATE_ATTACK")),
+    step("-- 加多少？还没有设置",
+      "我们还缺一个数值，并且尚未注册效果。",
+      effect("EFFECT_TYPE_SINGLE","EFFECT_UPDATE_ATTACK")+card(1500))
+  ],
+  question:"这段代码里的 EFFECT_UPDATE_ATTACK 表示什么？",
+  options:["训练战士的卡号","效果负责攻击力增减","发动玩家编号"],
+  correct:1,
+  explanation:"它是效果作用代码，不是数据库中的卡片编号。",
+  prompt:"补出攻击力增减效果的常量。",
+  template:"e1:SetCode(____)",
+  answers:["EFFECT_UPDATE_ATTACK"],
+  solution:"EFFECT_UPDATE_ATTACK",
+  hint:"完整名称：EFFECT_UPDATE_ATTACK。"
+},
+{
+  title:"设置数值：SetValue",
+  goal:"设置加成，同时区分配置与生效。",
+  text:`
+    <p><code>e1:SetValue(500)</code> 将本例的攻击力加成设置为500。</p>
+    <p>因为前面已经配置了 <code>EFFECT_UPDATE_ATTACK</code>，
+    这里的数值才表示攻击力的增减量。</p>
+    <p>它不是把攻击力直接变成500。</p>
+    <p>而且效果尚未注册，因此本步骤仍然只是配置。</p>
+  `,
+  example:`e1:SetCode(EFFECT_UPDATE_ATTACK)
+e1:SetValue(500)`,
+  takeaway:"本例的500表示加成量，不是最终攻击力。不同效果代码的 Value 含义可能不同。",
+  steps:[
+    step("-- 数值尚未设置",
+      "先确认作用已经是攻击力增减。",
+      effect("EFFECT_TYPE_SINGLE","EFFECT_UPDATE_ATTACK")),
+    step("e1:SetValue(500)",
+      "效果对象的数值字段变为500。",
+      effect("EFFECT_TYPE_SINGLE","EFFECT_UPDATE_ATTACK",500)),
+    step("-- 效果还未注册",
+      "不能仅因为完成 SetValue 就认为卡片攻击力已经变化。",
+      effect("EFFECT_TYPE_SINGLE","EFFECT_UPDATE_ATTACK",500)+card(1500))
+  ],
+  question:"SetValue(500) 执行后，本例中500表示什么？",
+  options:["最终攻击力固定为500","攻击力加成量500","卡片等级500"],
+  correct:1,
+  explanation:"在 EFFECT_UPDATE_ATTACK 的本例用法中，数值表示增减量。",
+  prompt:"将这项效果配置为增加800攻击力。只填写参数数值。",
+  template:"e1:SetValue(____)",
+  answers:["800"],
+  solution:"800",
+  hint:"不需要引号，直接输入数字。"
+},
+{
+  title:"注册效果：RegisterEffect",
+  goal:"完成创建、配置之后，把效果登记到卡片。",
+  text:`
+    <p><code>c:RegisterEffect(e1)</code> 把效果 e1 注册到卡片 c 上。</p>
+    <p>注意调用方向：是<strong>卡片接收效果</strong>，
+    不是让效果接收卡片。</p>
+    <p>对于本例已经配置好的自身加攻效果，在适用的场上状态下，
+    引擎会根据它计算当前攻击力。</p>
+    <p>并不是所有效果一注册就立刻执行；发动型效果的处理流程将在后续学习。</p>
+  `,
+  example:`local e1=Effect.CreateEffect(c)
+e1:SetType(EFFECT_TYPE_SINGLE)
+e1:SetCode(EFFECT_UPDATE_ATTACK)
+e1:SetValue(500)
+c:RegisterEffect(e1)`,
+  takeaway:"创建对象 → 配置效果 → 注册到卡片。注册不等于所有类型的效果都立即处理。",
+  steps:[
+    step("-- 已配置，未注册",
+      "效果存在，但尚未登记到卡片。",
+      effect("EFFECT_TYPE_SINGLE","EFFECT_UPDATE_ATTACK",500)+card(1500)),
+    step("c:RegisterEffect(e1)",
+      "卡片 c 接收效果 e1。",
+      effect("EFFECT_TYPE_SINGLE","EFFECT_UPDATE_ATTACK",500,true)),
+    step("-- 教学场景：表侧怪兽，效果适用，没有其他影响",
+      "本例当前攻击力为1500+500=2000。实际引擎还会考虑卡片状态和其他效果。",
+      card(2000)+box("效果列表",[["已注册效果","攻击力增减 +500"]]))
+  ],
+  question:"哪一行把 e1 注册到卡片 c？",
+  options:["e1:RegisterEffect(c)","c:RegisterEffect(e1)","id:RegisterEffect(s)"],
+  correct:1,
+  explanation:"接收效果的是卡片对象 c，因此写 c:RegisterEffect(e1)。",
+  prompt:"填写完整的注册语句。",
+  template:"-- 把效果 e1 注册到卡片 c\n____",
+  answers:["c:RegisterEffect(e1)"],
+  solution:"c:RegisterEffect(e1)",
+  hint:"卡片对象 c 在冒号前，效果对象 e1 放在参数括号内。"
+},
+{
+  title:"拼出你的第一个效果",
+  goal:"把已经认识的每一行，组合成自身攻击力上升500的完整脚本。",
+  text:`
+    <p>这次没有新 API。你只需要把前面学过的内容放在一起。</p>
+    <p>脚本开头取得 s 和 id，在 initial_effect 内创建、配置并注册效果。</p>
+    <p>此处是一项简单的自身加攻效果，不是发动后才加攻，
+    所以不需要 cost、target 或 operation。</p>
+    <p>练习采用固定骨架，避免你同时处理太多语法细节。</p>
+  `,
+  example:`1. 取得脚本表和编号
+2. 定义初始化函数
+3. 创建效果
+4. 设置单体效果类型
+5. 设置攻击力增减作用
+6. 设置加成500
+7. 注册到卡片
+8. end 结束函数`,
+  takeaway:"能说明每一行的职责，比一次抄对完整脚本更重要。",
+  steps:[
+    step("local s,id=GetID()",
+      "取得脚本表和卡号。",
+      box("脚本环境",[["s","脚本表"],["id","100000001"]])),
+    step("function s.initial_effect(c)",
+      "定义初始化入口；引擎调用时会传入卡片 c。",
+      card(1500)),
+    step("local e1=Effect.CreateEffect(c)",
+      "进入初始化函数后，创建效果对象。",
+      effect()),
+    step("e1:SetType(EFFECT_TYPE_SINGLE)",
+      "类型设置为单体效果。",
+      effect("EFFECT_TYPE_SINGLE")),
+    step("e1:SetCode(EFFECT_UPDATE_ATTACK)",
+      "作用设置为攻击力增减。",
+      effect("EFFECT_TYPE_SINGLE","EFFECT_UPDATE_ATTACK")),
+    step("e1:SetValue(500)",
+      "加成数值设置为500。",
+      effect("EFFECT_TYPE_SINGLE","EFFECT_UPDATE_ATTACK",500)),
+    step("c:RegisterEffect(e1)\nend",
+      "注册效果，结束函数。本教学场景中效果适用时，攻击力为2000。",
+      effect("EFFECT_TYPE_SINGLE","EFFECT_UPDATE_ATTACK",500,true)+card(2000))
+  ],
+  question:"为什么这个脚本没有 operation？",
+  options:[
+    "因为 end 会自动调用 operation",
+    "因为这是注册自身数值效果，不是本例中的发动处理",
+    "因为所有怪兽都不能有 operation"
+  ],
+  correct:1,
+  explanation:"本例注册的是单体攻击力增减效果，不需要发动后的处理函数。",
+  prompt:"把代码中的五个 ____ 分别补全。请保留本课骨架与变量名。",
+  template:"本题是受限骨架校验，不是任意 Lua 编译器。\n允许调整空白、添加单行注释或行末分号。",
+  starter:`local s,id=GetID()
+
+function s.initial_effect(c)
+    local e1=____
+    e1:SetType(____)
+    e1:SetCode(____)
+    e1:SetValue(____)
+    ____
+end`,
+  full:true,
+  solution:completeScript,
+  hint:"五个空依次是创建表达式、类型常量、作用常量、数值500、注册语句。"
+}
+];
+
+/* ---------- 学习记录 ---------- */
+const $=id=>document.getElementById(id);
+const STORAGE_KEY="ygo-lua-foundations-v1";
+let state={current:0,records:{}};
+
+try{
+  const data=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");
+  if(data && typeof data==="object"){
+    if(Number.isInteger(data.current) &&
+      data.current>=0 && data.current<lessons.length){
+      state.current=data.current;
+    }
+    if(data.records && typeof data.records==="object"){
+      state.records=data.records;
+    }
+  }
+}catch{
+  $("storageNotice").textContent="浏览器暂时无法读取学习记录，本次仍可正常学习。";
+}
+
+function record(index=state.current){
+  const old=state.records[index];
+  if(!old || typeof old!=="object"){
+    state.records[index]={
+      step:0,observed:false,quiz:false,exercise:false,draft:null
+    };
+  }
+  const r=state.records[index];
+  if(!Number.isInteger(r.step)||r.step<0||r.step>=lessons[index].steps.length){
+    r.step=0;
+  }
+  return r;
+}
+
+function save(){
+  try{
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+  }catch{
+    $("storageNotice").textContent="无法保存到浏览器。关闭页面后，本次进度可能丢失。";
+  }
+}
+
+function isComplete(index){
+  const r=record(index);
+  return r.observed && r.quiz && r.exercise;
+}
+
+function refreshNavigation(){
+  $("nav").replaceChildren();
+  lessons.forEach((lesson,i)=>{
+    const button=document.createElement("button");
+    button.className=i===state.current?"active":"";
+    if(i===state.current)button.setAttribute("aria-current","step");
+    button.innerHTML=
+      `<span class="num">${String(i+1).padStart(2,"0")}</span>`+
+      `<span>${escapeHTML(lesson.title)}</span>`+
+      `<span class="tick">${isComplete(i)?"✓":""}</span>`;
+    button.onclick=()=>openLesson(i);
+    $("nav").appendChild(button);
+  });
+  const count=lessons.filter((_,i)=>isComplete(i)).length;
+  $("progressText").textContent=`${count} / ${lessons.length}`;
+  $("progressBar").style.width=`${count/lessons.length*100}%`;
+}
+
+function refreshChecklist(){
+  const r=record();
+  const rows=[
+    [r.observed,"看完全部观察步骤"],
+    [r.quiz,"答对理解题"],
+    [r.exercise,"完成本课小练习"]
+  ];
+  $("checklist").innerHTML=rows.map(([ok,text])=>
+    `<div class="${ok?"goodText":"muted"}">${ok?"✓":"○"} ${text}</div>`
+  ).join("");
+  $("lessonStatus").textContent=isComplete(state.current)?
+    "✓ 本课已完成":"按自己的节奏慢慢来";
+  refreshNavigation();
+}
+
+function renderStep(){
+  const lesson=lessons[state.current];
+  const r=record();
+  const current=lesson.steps[r.step];
+
+  $("visual").innerHTML=
+    `<div class="visualTitle">教学场景 · 第 ${r.step+1} 步</div>`+
+    current.html;
+  $("stepCode").textContent=current.code;
+  $("stepCaption").textContent=current.caption;
+  $("stepCount").textContent=
+    `观察进度：${r.step+1} / ${lesson.steps.length}`;
+
+  $("previousStep").disabled=r.step===0;
+  $("nextStep").disabled=r.step===lesson.steps.length-1;
+  $("nextStep").textContent=r.step===lesson.steps.length-1?
+    "观察完毕 ✓":"观察下一步 →";
+
+  if(r.step===lesson.steps.length-1)r.observed=true;
+  save();
+  refreshChecklist();
+}
+
+function renderQuiz(){
+  const lesson=lessons[state.current];
+  const r=record();
+  $("question").textContent=lesson.question;
+  $("options").replaceChildren();
+
+  lesson.options.forEach((text,i)=>{
+    const button=document.createElement("button");
+    button.className="option";
+    button.textContent=`${String.fromCharCode(65+i)}. ${text}`;
+    if(r.quiz && i===lesson.correct)button.classList.add("good");
+
+    button.onclick=()=>{
+      document.querySelectorAll("#options .option").forEach(b=>{
+        b.classList.remove("bad","good");
+      });
+
+      if(i===lesson.correct){
+        r.quiz=true;
+        button.classList.add("good");
+        $("quizFeedback").className="feedback goodText";
+        $("quizFeedback").textContent="正确！"+lesson.explanation;
+        save();
+        refreshChecklist();
+      }else{
+        button.classList.add("bad");
+        $("quizFeedback").className="feedback badText";
+        $("quizFeedback").textContent=
+          "还不对。回看本课知识点后可以继续选择，不扣分。";
+      }
+    };
+    $("options").appendChild(button);
+  });
+
+  $("quizFeedback").className="feedback"+(r.quiz?" goodText":"");
+  $("quizFeedback").textContent=r.quiz?
+    "✓ 已答对。"+lesson.explanation:"可以多次尝试，不需要一次答对。";
+}
+
+/* ---------- 课程切换 ---------- */
+function openLesson(index){
+  if(index<0||index>=lessons.length)return;
+  state.current=index;
+  const lesson=lessons[index];
+  const r=record();
+
+  $("lessonTag").textContent=`基础篇 · 第 ${index+1} / ${lessons.length} 课`;
+  $("lessonTitle").textContent=lesson.title;
+  $("lessonGoal").textContent=lesson.goal;
+  $("lessonText").innerHTML=lesson.text;
+  $("example").textContent=lesson.example;
+  $("takeaway").textContent="记住这一句："+lesson.takeaway;
+
+  $("exercisePrompt").textContent=lesson.prompt;
+  $("exerciseTemplate").textContent=lesson.template;
+  $("exerciseHint").textContent=lesson.hint;
+  $("exerciseSolution").textContent=lesson.solution;
+
+  $("answerInput").hidden=!!lesson.full;
+  $("codeInput").hidden=!lesson.full;
+  $("inputLabel").htmlFor=lesson.full?"codeInput":"answerInput";
+  $("inputLabel").textContent=lesson.full?"补全下面的脚本":"在下方填写空缺部分";
+
+  const input=lesson.full?$("codeInput"):$("answerInput");
+  input.value=typeof r.draft==="string"?r.draft:(lesson.starter||"");
+
+  $("exerciseFeedback").className="feedback"+(r.exercise?" goodText":"");
+  $("exerciseFeedback").textContent=r.exercise?
+    "✓ 你已经通过本课练习，可继续修改并再次检查。":"";
+
+  $("hintDetails").open=false;
+  $("solutionDetails").open=false;
+  $("previousLesson").disabled=index===0;
+  $("nextLesson").disabled=index===lessons.length-1;
+  $("nextLesson").textContent=index===lessons.length-1?
+    "本阶段最后一课":"下一课 →";
+
+  renderQuiz();
+  renderStep();
+  save();
+}
+
+$("previousStep").onclick=()=>{
+  const r=record();
+  if(r.step>0){r.step--;renderStep();}
+};
+$("nextStep").onclick=()=>{
+  const r=record();
+  if(r.step<lessons[state.current].steps.length-1){
+    r.step++;renderStep();
+  }
+};
+
+$("previousLesson").onclick=()=>{
+  openLesson(state.current-1);
+  window.scrollTo({top:0,behavior:"smooth"});
+};
+$("nextLesson").onclick=()=>{
+  openLesson(state.current+1);
+  window.scrollTo({top:0,behavior:"smooth"});
+};
+
+/* ---------- 受限填空检查，不宣称执行 Lua ---------- */
+function normalizeFragment(text){
+  return String(text).trim().replace(/\s+/g,"").replace(/;+$/,"");
+}
+
+function scriptLines(text){
+  return String(text).split(/\r?\n/)
+    .map(line=>line.replace(/--.*$/,"").trim())
+    .filter(Boolean)
+    .map(normalizeFragment);
+}
+
+function validateFinal(text){
+  const actual=scriptLines(text);
+  const expected=scriptLines(completeScript);
+  const hints=[
+    "第一行应取得脚本表 s 和卡号 id。",
+    "接着定义 s.initial_effect(c)。",
+    "使用 Effect.CreateEffect(c) 创建效果。",
+    "使用 SetType 配置 EFFECT_TYPE_SINGLE。",
+    "使用 SetCode 配置 EFFECT_UPDATE_ATTACK。",
+    "使用 SetValue 设置数值500。",
+    "把 e1 注册到卡片 c。",
+    "最后用 end 结束函数。"
+  ];
+
+  for(let i=0;i<expected.length;i++){
+    if(actual[i]!==expected[i]){
+      return {
+        ok:false,
+        message:`有效代码第 ${i+1} 行还需要调整。${hints[i]}`
+      };
+    }
+  }
+  if(actual.length!==expected.length){
+    return {
+      ok:false,
+      message:"骨架之外还有额外代码。本练习只检查指定的八行结构。"
+    };
+  }
+  return {ok:true};
+}
+
+function checkExercise(){
+  const lesson=lessons[state.current];
+  const r=record();
+  const input=lesson.full?$("codeInput"):$("answerInput");
+  r.draft=input.value;
+
+  let result;
+  if(lesson.full){
+    result=validateFinal(input.value);
+  }else{
+    result={
+      ok:lesson.answers.some(a=>
+        normalizeFragment(a)===normalizeFragment(input.value)
+      )
+    };
+  }
+
+  if(result.ok){
+    r.exercise=true;
+    $("exerciseFeedback").className="feedback goodText";
+    $("exerciseFeedback").textContent=lesson.full?
+      "✓ 完整骨架正确！你已把创建、配置和注册串联起来。此结果是结构检查，不是引擎运行结果。":
+      "✓ 填写正确！试着用自己的话说明这一小段在做什么。";
+  }else{
+    $("exerciseFeedback").className="feedback badText";
+    $("exerciseFeedback").textContent=result.message||
+      "暂时不匹配。请检查大小写、点号与冒号，并确认只填写题目要求的部分。";
+  }
+
+  save();
+  refreshChecklist();
+}
+
+$("checkAnswer").onclick=checkExercise;
+
+$("resetAnswer").onclick=()=>{
+  const lesson=lessons[state.current];
+  const input=lesson.full?$("codeInput"):$("answerInput");
+  input.value=lesson.starter||"";
+  record().draft=input.value;
+  $("exerciseFeedback").className="feedback muted";
+  $("exerciseFeedback").textContent=
+    "输入已重置；此前通过记录保留。可以再独立练习一次。";
+  save();
+};
+
+for(const id of ["answerInput","codeInput"]){
+  $(id).addEventListener("input",event=>{
+    record().draft=event.target.value;
+    save();
+  });
+}
+
+$("answerInput").addEventListener("keydown",event=>{
+  if(event.key==="Enter")checkExercise();
+});
+
+$("codeInput").addEventListener("keydown",event=>{
+  if(event.key==="Tab"){
+    event.preventDefault();
+    const t=event.target;
+    t.setRangeText("    ",t.selectionStart,t.selectionEnd,"end");
+    t.dispatchEvent(new Event("input"));
+  }
+  if(event.key==="Enter"&&(event.ctrlKey||event.metaKey)){
+    event.preventDefault();
+    checkExercise();
+  }
+});
+
+$("clearProgress").onclick=()=>{
+  if(!confirm("确定清空全部课程进度和练习草稿吗？"))return;
+  state={current:0,records:{}};
+  save();
+  openLesson(0);
+};
+
+/* ---------- 术语字典 ---------- */
+const terms=[
+  ["数据库 / .cdb","保存卡名、类型、基础攻防及显示文字等卡片数据。"],
+  ["脚本 / .lua","告诉引擎效果怎样实现，而不是只展示效果文字。"],
+  ["GetID()","本课程采用的脚本辅助函数，返回脚本表和卡片编号。"],
+  ["s","常用于引用脚本表，不是场上的卡片。"],
+  ["id","常用于保存卡片编号。"],
+  ["c / Card","c 是常用变量名，通常引用具体的卡片对象。"],
+  ["e1 / Effect","e1 是常用变量名，通常引用一个效果对象。"],
+  ["initial_effect","初始化并注册卡片效果的入口。"],
+  ["c:GetAttack()","读取卡片当前攻击力，返回数字，不修改攻击力。"],
+  ["Effect.CreateEffect(c)","创建效果对象，并以 c 作为来源卡片。"],
+  ["SetType","设置效果类型。"],
+  ["EFFECT_TYPE_SINGLE","单体效果类型常量，不代表一回合一次。"],
+  ["SetCode","配置效果代码；本例指定攻击力增减，其他类型中也可指定事件。"],
+  ["EFFECT_UPDATE_ATTACK","攻击力增减效果代码。"],
+  ["SetValue","设置效果使用的值。其含义取决于具体效果。"],
+  ["c:RegisterEffect(e1)","把效果 e1 注册到卡片 c。"]
+];
+
+$("glossary").innerHTML=terms.map(([name,description])=>
+  `<div class="glossaryItem">
+    <strong>${escapeHTML(name)}</strong>
+    <div class="muted">${escapeHTML(description)}</div>
+  </div>`
+).join("");
+
+openLesson(state.current);
+</script>
+<script src="progress-sync.js"></script>
+</body>
+</html>

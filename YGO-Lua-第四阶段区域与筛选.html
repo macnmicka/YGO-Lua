@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>YGO Lua · 第四阶段：区域与筛选</title>
+<style>
+:root{
+  --bg:#0a1020;--panel:#131e33;--panel2:#18263f;
+  --line:#2a3c5d;--text:#e6eeff;--muted:#a8b9d5;
+  --blue:#86a5ff;--green:#69e2b2;--yellow:#ffd782;--red:#ff9aa8;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:radial-gradient(ellipse at top right,#172750,transparent 50%),var(--bg);
+  color:var(--text);
+  font:15px/1.8 system-ui,"Microsoft YaHei",sans-serif;
+}
+button,input,textarea,select{font:inherit}
+button{
+  cursor:pointer;padding:9px 14px;
+  border:1px solid var(--line);border-radius:9px;
+  background:var(--panel2);color:var(--text);
+}
+button:hover{border-color:var(--blue)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{
+  outline:2px solid var(--blue);outline-offset:3px;
+}
+.primary{background:#486aca;border-color:#6485e6;color:white}
+.shell{display:grid;grid-template-columns:255px minmax(0,1fr);min-height:100vh}
+aside{
+  position:sticky;top:0;height:100vh;overflow:auto;
+  padding:22px 16px;border-right:1px solid var(--line);background:#0c1425;
+}
+.brand{font-size:21px;font-weight:800}
+.subtitle{color:var(--muted);font-size:12px}
+.progressBox{
+  margin:20px 0;padding:13px;background:var(--panel);
+  border:1px solid var(--line);border-radius:12px;
+}
+.progressTitle{display:flex;justify-content:space-between;font-size:13px}
+.progressTrack{
+  height:7px;background:#080d18;border-radius:10px;margin-top:10px;overflow:hidden;
+}
+.progressTrack div{
+  height:100%;background:linear-gradient(90deg,var(--blue),var(--green));
+  transition:width .3s;
+}
+nav{display:grid;gap:7px}
+nav button{
+  display:flex;align-items:center;gap:9px;text-align:left;
+  padding:10px;background:transparent;border-color:transparent;font-size:13px;
+}
+nav button.active{background:#22375e;border-color:#5d7fcc}
+nav .num{color:var(--muted);min-width:21px}
+nav .tick{margin-left:auto;color:var(--green)}
+main{min-width:0;width:100%;max-width:1400px;margin:0 auto;padding:30px}
+.hero{
+  padding:24px;border:1px solid var(--line);border-radius:17px;
+  background:linear-gradient(120deg,#1d3053,#132139);margin-bottom:20px;
+}
+.tag{color:var(--green);font-size:12px;font-weight:700;letter-spacing:.08em}
+h1{margin:8px 0;font-size:29px;line-height:1.4}
+h2{font-size:18px;margin:0 0 14px}
+h3{font-size:15px;margin:16px 0 8px}
+p{margin:9px 0}
+.muted{color:var(--muted)}
+.grid{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:20px;align-items:start;
+}
+.panel{
+  padding:20px;border:1px solid var(--line);background:var(--panel);
+  border-radius:14px;margin-bottom:20px;min-width:0;
+}
+.lessonText{color:#d0def5}
+.lessonText strong{color:white}
+code{
+  color:#a5edcf;background:#0b1526;padding:2px 5px;
+  border-radius:5px;font-family:Consolas,monospace;
+}
+pre{
+  background:#080f1d;color:#d6e5ff;border:1px solid #263958;
+  padding:15px;border-radius:10px;white-space:pre-wrap;
+  overflow-wrap:anywhere;font:14px/1.8 Consolas,monospace;
+}
+.note{
+  padding:12px 14px;border-left:3px solid var(--blue);
+  border-radius:0 8px 8px 0;background:#182943;
+  color:#c5d6f2;font-size:13px;margin:15px 0;
+}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+.visual{
+  min-height:170px;padding:18px;background:#0b1424;
+  border:1px dashed #395277;border-radius:12px;
+}
+.visualTitle{font-weight:700;color:var(--yellow);margin-bottom:12px}
+.object{
+  padding:13px;background:#182943;border:1px solid #3c567e;
+  border-radius:10px;margin-bottom:10px;
+}
+.object b{display:block;color:var(--blue);margin-bottom:5px}
+.fields{display:grid;grid-template-columns:auto 1fr;gap:5px 15px;font-size:13px}
+.fields span:nth-child(odd){color:var(--muted)}
+.stepCount{font-size:12px;color:var(--muted)}
+.caption{padding:12px 0 0;min-height:62px;color:#c8d9f7;font-size:14px}
+.option{width:100%;text-align:left;display:block;margin-top:9px}
+.option.good{border-color:var(--green);background:#173d34}
+.option.bad{border-color:var(--red);background:#412b3b}
+.feedback{min-height:30px;padding-top:12px;font-size:14px}
+.goodText{color:var(--green)}
+.badText{color:var(--red)}
+textarea,input[type=text],select{
+  padding:10px;color:#e6efff;background:#090f1d;
+  border:1px solid #3a5276;border-radius:9px;
+}
+textarea,input[type=text]{width:100%;font:14px/1.8 Consolas,monospace}
+textarea{min-height:245px;resize:vertical;tab-size:4}
+[hidden]{display:none!important}
+details{margin-top:13px}
+summary{cursor:pointer;color:var(--blue)}
+.footerNav{
+  display:flex;justify-content:space-between;align-items:center;
+  gap:14px;margin-bottom:25px;
+}
+.badge{color:var(--green);font-size:13px}
+.small{font-size:12px}
+.settings{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.labCards{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+  gap:12px;margin-top:16px;
+}
+.labCard{
+  padding:15px;background:#0b1424;border:1px solid #3c567e;border-radius:12px;
+}
+.labCard.match{border-color:var(--green);background:#102c2b}
+.labCard h3{margin-top:0;color:var(--blue)}
+.labCard label{display:block;font-size:13px;margin-top:9px}
+.labCard select{width:100%;padding:7px}
+.labCard .reason{margin-top:12px;font-size:12px;color:var(--muted)}
+#storageNotice{font-size:12px;color:var(--yellow)}
+.tableWrap{overflow:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line)}
+@media(max-width:1100px){.grid{grid-template-columns:1fr}}
+@media(max-width:700px){
+  .shell{display:block}
+  aside{position:static;height:auto;padding:14px}
+  nav{display:flex;overflow:auto}
+  nav button{min-width:185px}
+  .progressBox{margin:12px 0}
+  main{padding:15px}
+  h1{font-size:24px}
+  .hero,.panel{padding:17px}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside>
+  <div class="brand">✦ YGO Lua 学习室</div>
+  <div class="subtitle">先看懂，再动手，最后独立写卡</div>
+  <div class="progressBox">
+    <div class="progressTitle">
+      <span>第四阶段 · 筛选篇</span>
+      <strong id="progressText"></strong>
+    </div>
+    <div class="progressTrack"><div id="progressBar"></div></div>
+  </div>
+  <nav id="nav" aria-label="课程目录"></nav>
+  <details>
+    <summary>学习记录与备份</summary>
+    <p class="small muted">
+      本版按固定课程ID保存记录，不影响前三阶段。
+      导出文件只包含本阶段记录与草稿，不包含卡片实验场景。
+    </p>
+    <div class="actions">
+      <button id="exportProgress">导出记录</button>
+      <button id="importProgress">导入记录</button>
+      <button id="clearProgress">清空本阶段</button>
+    </div>
+    <input id="importFile" type="file" accept=".json,application/json" hidden>
+  </details>
+  <p id="storageNotice" aria-live="polite"></p>
+</aside>
+
+<main>
+  <header class="hero">
+    <div class="tag" id="lessonTag"></div>
+    <h1 id="lessonTitle"></h1>
+    <div class="muted" id="lessonGoal"></div>
+  </header>
+
+  <div class="grid">
+    <div>
+      <section class="panel">
+        <h2>① 先理解一个小知识点</h2>
+        <div id="lessonText" class="lessonText"></div>
+        <pre id="example"></pre>
+        <div class="note" id="takeaway"></div>
+      </section>
+
+      <section class="panel">
+        <h2>② 点击观察</h2>
+        <p class="small muted">预设教学演示，不执行任意 Lua。</p>
+        <div class="visual" id="visual"></div>
+        <pre id="stepCode"></pre>
+        <div class="caption" id="stepCaption" aria-live="polite"></div>
+        <div class="actions">
+          <button id="previousStep">← 上一步</button>
+          <button id="nextStep" class="primary">观察下一步 →</button>
+        </div>
+        <div class="stepCount" id="stepCount"></div>
+      </section>
+    </div>
+
+    <div>
+      <section class="panel">
+        <h2>③ 确认你理解了</h2>
+        <p id="question"></p>
+        <div id="options"></div>
+        <div class="feedback" id="quizFeedback" aria-live="polite"></div>
+      </section>
+
+      <section class="panel">
+        <h2>④ 只写一点点</h2>
+        <p id="exercisePrompt"></p>
+        <pre id="exerciseTemplate"></pre>
+        <label for="answerInput" class="small muted" id="inputLabel">
+          填写空缺部分
+        </label>
+        <input id="answerInput" type="text" autocomplete="off" spellcheck="false">
+        <textarea id="codeInput" spellcheck="false" hidden
+          aria-label="代码骨架练习"></textarea>
+        <div class="actions">
+          <button class="primary" id="checkAnswer">检查练习</button>
+          <button id="resetAnswer">重新填写</button>
+        </div>
+        <div class="feedback" id="exerciseFeedback" aria-live="polite"></div>
+        <details id="hintDetails">
+          <summary>给我一个提示</summary><p id="exerciseHint"></p>
+        </details>
+        <details id="solutionDetails">
+          <summary>查看参考答案</summary><pre id="exerciseSolution"></pre>
+          <p class="small muted">查看答案不会自动完成练习。</p>
+        </details>
+      </section>
+
+      <section class="panel">
+        <h2>本课完成条件</h2>
+        <div id="checklist"></div>
+        <p class="small muted">可以自由切课。理解后再继续，不需要一次答对。</p>
+      </section>
+    </div>
+  </div>
+
+  <div class="footerNav">
+    <button id="previousLesson">← 上一课</button>
+    <span class="badge" id="lessonStatus"></span>
+    <button id="nextLesson" class="primary">下一课 →</button>
+  </div>
+
+  <section class="panel">
+    <h2>⑤ 区域与筛选实验台</h2>
+    <p>修改场景，观察 GetMatchingGroup 会收集哪些卡。</p>
+    <div class="note">
+      下方实验台运行固定的教学规则，不读取上方练习代码。
+      你可以编辑场景卡片，但这里不验证完整游戏状态是否合法。
+      非怪兽区卡片的“表侧”选项不参与本场景匹配。
+      查询只取得集合，不选对象、不移动卡片，也不破坏卡片。
+    </div>
+
+    <div class="settings">
+      <label>参照玩家 tp
+        <select id="labPlayer">
+          <option value="0">玩家0</option>
+          <option value="1">玩家1</option>
+        </select>
+      </label>
+      <label>搜索范围
+        <select id="labScope">
+          <option value="own">tp的怪兽区</option>
+          <option value="opponent">对方的怪兽区</option>
+          <option value="both">双方怪兽区</option>
+        </select>
+      </label>
+      <label><input type="checkbox" id="labFaceup" checked>只保留表侧卡片</label>
+      <button id="resetLab">重置场景</button>
+    </div>
+
+    <div class="labCards" id="labCards"></div>
+    <h3>对应查询代码</h3>
+    <pre id="labCode"></pre>
+    <h3>查询结果</h3>
+    <div id="labResult" aria-live="polite"></div>
+
+    <details>
+      <summary>建议完成的三个实验</summary>
+      <ol>
+        <li>范围选“tp的怪兽区”，切换tp，观察“己方”随参照玩家改变。</li>
+        <li>把一张匹配卡改成里侧，观察它何时被filter排除。</li>
+        <li>把所有符合条件的卡移出搜索范围，观察得到的是空Group、数量0，而不是nil。</li>
+      </ol>
+    </details>
+  </section>
+
+  <section class="panel">
+    <details>
+      <summary>随时可查：本阶段术语小字典</summary>
+      <div id="glossary"></div>
+    </details>
+  </section>
+
+  <section class="panel">
+    <h2>本阶段与下一阶段的边界</h2>
+    <p>本阶段只负责“找出符合条件的卡”，尚未把它们作为效果对象选中。</p>
+    <p class="muted">
+      下一阶段会分别学习：取对象是什么意思、CARD_TARGET属性、
+      IsExistingTarget、SelectTarget、GetFirstTarget，以及对象离场后的关联检查。
+    </p>
+  </section>
+
+  <p class="small muted">
+    本课程采用现代 EDOPro 常见写法。示例中的查询片段不是完整可发动卡片脚本。
+    实际写卡应结合效果文本、回调阶段和引擎规则测试。
+  </p>
+</main>
+</div>
+
+<script>
+"use strict";
+
+/* ==================================================
+   A. 课程数据
+   未来可独立移入 courses/stage-04.js
+   ================================================== */
+
+const filterAnswer=`function s.filter(c)
+    return c:IsFaceup()
+end`;
+
+const integratedAnswer=`function s.filter(c)
+    return c:IsFaceup()
+end
+
+local g=Duel.GetMatchingGroup(s.filter,tp,LOCATION_MZONE,0,nil)
+local count=g:GetCount()`;
+
+const STAGE={
+  id:"stage-04",
+  title:"区域与筛选",
+  startNumber:31,
+  lessons:[
+{
+  id:"location-constants",
+  title:"区域常量：卡在哪里",
+  goal:"先读懂区域名字，不急着记长参数。",
+  text:`
+    <p>引擎用<strong>区域常量</strong>表示卡片所在的位置范围。</p>
+    <p><code>LOCATION_MZONE</code>：怪兽区；
+       <code>LOCATION_HAND</code>：手牌；
+       <code>LOCATION_GRAVE</code>：墓地；
+       <code>LOCATION_DECK</code>：主卡组。</p>
+    <p>区域常量不是具体卡片，也不是玩家编号。</p>
+    <p><strong>怪兽卡类型与怪兽区位置不是同一概念。</strong>
+    手牌中的怪兽卡并不在怪兽区；怪兽卡也可能因效果处于魔法与陷阱区。</p>
+    <p>本阶段从单个区域开始，不要求组合多个区域。</p>`,
+  example:`LOCATION_MZONE  -- 怪兽区
+LOCATION_HAND   -- 手牌
+LOCATION_GRAVE  -- 墓地
+LOCATION_DECK   -- 主卡组`,
+  takeaway:"区域说明卡在哪里，不直接说明卡的类型或属于哪位玩家。",
+  steps:[
+    {code:"LOCATION_MZONE",
+     caption:"表示怪兽区范围，不指定是哪位玩家的怪兽区。",
+     fields:[["区域","怪兽区"],["是否含玩家信息","不含"]]},
+    {code:"LOCATION_HAND",
+     caption:"一张怪兽卡在手牌时，位置是手牌，不是怪兽区。",
+     fields:[["卡片类型","怪兽卡"],["当前位置","手牌"]]},
+    {code:"LOCATION_GRAVE",
+     caption:"卡片进入墓地，位置发生变化；卡片本身没有因此变成一个区域常量。",
+     fields:[["当前位置","墓地"],["区域常量","LOCATION_GRAVE"]]}
+  ],
+  question:"怪兽卡在手牌中时，能仅因它是怪兽卡就说它在LOCATION_MZONE吗？",
+  options:["可以，怪兽卡总在怪兽区","不可以，类型和位置不同","只有攻击力大于0才可以"],
+  correct:1,
+  explanation:"怪兽卡是卡片类型描述，LOCATION_MZONE是位置范围。",
+  prompt:"填写表示怪兽区的区域常量。",
+  template:"搜索怪兽区时使用：____",
+  answer:"LOCATION_MZONE",
+  hint:"MZONE表示Monster Zone，完整名称前面还有LOCATION_。"
+},
+{
+  id:"card-is-location",
+  title:"IsLocation：判断位置",
+  goal:"让Card对象回答自己是否位于指定区域。",
+  text:`
+    <p><code>c:IsLocation(LOCATION_MZONE)</code> 返回卡片c是否位于怪兽区。</p>
+    <p>结果是布尔值，适合用在if判断或return中。</p>
+    <p>这是<strong>判断</strong>，不会把卡片移动过去。</p>
+    <p>这里的c是具体卡片对象；LOCATION_MZONE是传入的区域参数。</p>`,
+  example:`local in_mzone=c:IsLocation(LOCATION_MZONE)
+
+-- in_mzone：true 或 false
+-- 这行不会移动卡片`,
+  takeaway:"IsLocation检查位置，不移动卡片。",
+  steps:[
+    {code:"c:IsLocation(LOCATION_MZONE)",
+     caption:"卡片本来就在怪兽区，返回true。",
+     fields:[["当前位置","怪兽区"],["检查结果","true"],["位置改变了吗","没有"]]},
+    {code:"c:IsLocation(LOCATION_MZONE)",
+     caption:"另一个场景中，卡片在手牌，返回false。",
+     fields:[["当前位置","手牌"],["检查结果","false"],["位置改变了吗","没有"]]},
+    {code:"c:IsLocation(LOCATION_HAND)",
+     caption:"同一张手牌改为检查手牌位置，结果变成true。",
+     fields:[["当前位置","手牌"],["检查区域","手牌"],["检查结果","true"]]}
+  ],
+  question:"执行c:IsLocation(LOCATION_GRAVE)会把c送去墓地吗？",
+  options:["会","不会，只检查它是否在墓地","只有返回true才会送墓"],
+  correct:1,
+  explanation:"IsLocation只检查当前位置，返回真假，不负责移动。",
+  prompt:"填写检查c是否在怪兽区的表达式。",
+  template:"return ____",
+  answer:"c:IsLocation(LOCATION_MZONE)",
+  hint:"对象c、冒号、方法IsLocation，参数是怪兽区常量。"
+},
+{
+  id:"card-is-faceup",
+  title:"IsFaceup：判断表侧",
+  goal:"认识一个没有额外参数的卡片判断方法。",
+  text:`
+    <p><code>c:IsFaceup()</code> 判断卡片是否为表侧表示。</p>
+    <p>在本课怪兽区场景中，表侧攻击与表侧守备都满足它。</p>
+    <p>它不等于“攻击表示”，也不会把里侧怪兽翻开。</p>
+    <p>后续为了查找表侧怪兽，可以把这个判断放进筛选函数。</p>`,
+  example:`return c:IsFaceup()
+
+-- 表侧攻击：true
+-- 表侧守备：true
+-- 里侧守备：false`,
+  takeaway:"表侧不等于攻击表示。IsFaceup不会改变表示形式。",
+  steps:[
+    {code:"c:IsFaceup()",
+     caption:"表侧攻击怪兽满足条件。",
+     fields:[["表示形式","表侧攻击"],["结果","true"]]},
+    {code:"c:IsFaceup()",
+     caption:"表侧守备仍然是表侧。",
+     fields:[["表示形式","表侧守备"],["结果","true"]]},
+    {code:"c:IsFaceup()",
+     caption:"里侧守备返回false，检查不会把它翻开。",
+     fields:[["表示形式","里侧守备"],["结果","false"],["是否翻开","否"]]}
+  ],
+  question:"表侧守备怪兽的IsFaceup()返回什么？",
+  options:["true","false","怪兽的防御力"],
+  correct:0,
+  explanation:"IsFaceup检查表侧，不要求攻击表示。",
+  prompt:"填写检查c是否表侧的表达式。",
+  template:"return ____",
+  answer:"c:IsFaceup()",
+  hint:"Faceup的大小写要正确，方法后面有空括号。"
+},
+{
+  id:"first-filter",
+  title:"第一个filter",
+  goal:"filter不是新语言，只是返回是否符合条件的函数。",
+  text:`
+    <p><strong>filter就是筛选函数。</strong>它接收候选卡片，判断是否保留。</p>
+    <p>本例只要求表侧，因此函数体直接返回 <code>c:IsFaceup()</code>。</p>
+    <p>名字filter是习惯，不是Lua关键字，也不是仅凭命名就会自动工作。</p>
+    <p><strong>此处的c是每次接受检查的候选卡片</strong>，
+    不应把它固定理解成initial_effect里初始化的那张卡。</p>
+    <p>这个函数只判定，不抽卡、不扣LP、不移动候选卡。</p>`,
+  example:filterAnswer,
+  takeaway:"filter接收候选卡，返回真假；参数c会随候选卡变化。",
+  steps:[
+    {code:"s.filter(候选卡A)",
+     caption:"这是调用关系示意，不是可复制的Lua表达式。A表侧，保留。",
+     fields:[["本次c","候选卡A"],["状态","表侧"],["返回","true"]]},
+    {code:"s.filter(候选卡B)",
+     caption:"下一次传入B，c现在引用B。B里侧，排除。",
+     fields:[["本次c","候选卡B"],["状态","里侧"],["返回","false"]]},
+    {code:"return c:IsFaceup()",
+     caption:"同一个函数用于不同候选卡，不需要为每张卡复制一遍代码。",
+     fields:[["函数数量","1个"],["检查对象","每次传入的候选卡"]]}
+  ],
+  question:"filter(c)中的c一定是发动这张效果的卡吗？",
+  options:["一定是","不是，这里是当前接受筛选的候选卡","一定是对方卡片"],
+  correct:1,
+  explanation:"局部参数名相同不代表引用同一个对象。这里由调用者逐张传入候选卡。",
+  prompt:"补全只保留表侧卡片的filter。",
+  template:"受限骨架检查，允许空白、单行注释和行末分号。",
+  full:true,
+  starter:`function s.filter(c)
+    return ____
+end`,
+  answer:filterAnswer,
+  hint:"return后使用前一课的IsFaceup表达式。"
+},
+{
+  id:"relative-search-zones",
+  title:"tp与双方搜索区域",
+  goal:"读懂“先己方，再对方”的成对区域参数。",
+  text:`
+    <p>下一课的查询函数会接收一个参照玩家，以及两个区域参数。</p>
+    <p>本课用tp作为参照玩家。第一个区域是<strong>tp一侧</strong>，
+    第二个区域是<strong>1-tp一侧</strong>。</p>
+    <p>某一侧填 <code>0</code>，表示这一侧不搜索任何区域。</p>
+    <p>不要把区域位置里的0理解为玩家0。</p>
+    <p>“己方、对方”是相对于tp，不是固定对应屏幕上下。</p>`,
+  example:`tp, LOCATION_MZONE, 0
+-- 只搜索tp一侧的怪兽区
+
+tp, 0, LOCATION_MZONE
+-- 只搜索另一侧的怪兽区
+
+tp, LOCATION_MZONE, LOCATION_MZONE
+-- 搜索双方怪兽区`,
+  takeaway:"位置很重要：这里的0是空搜索范围，不是玩家编号。",
+  steps:[
+    {code:"tp=0；区域配置：LOCATION_MZONE,0",
+     caption:"此处是参数配置示意。搜索玩家0怪兽区。",
+     fields:[["参照玩家tp","0"],["搜索玩家0","怪兽区"],["搜索玩家1","无"]]},
+    {code:"tp=1；区域配置：LOCATION_MZONE,0",
+     caption:"相同区域配置，tp变成1后搜索玩家1。",
+     fields:[["参照玩家tp","1"],["搜索玩家1","怪兽区"],["搜索玩家0","无"]]},
+    {code:"tp=1；区域配置：0,LOCATION_MZONE",
+     caption:"第二个区域属于另一侧，因此这次搜索玩家0。",
+     fields:[["参照玩家tp","1"],["搜索玩家1","无"],["搜索玩家0","怪兽区"]]}
+  ],
+  question:"在tp,LOCATION_MZONE,0中，最后的0表示什么？",
+  options:["搜索玩家0的所有卡","不搜索另一侧任何区域","只搜索编号为0的卡"],
+  correct:1,
+  explanation:"这个参数位置是区域范围，因此0表示空范围。",
+  prompt:"配置为只搜索对方怪兽区，补出最后一个区域。",
+  template:"tp, 0, ____",
+  answer:"LOCATION_MZONE",
+  hint:"另一个区域已经是0；对方一侧填怪兽区常量。"
+},
+{
+  id:"get-matching-group",
+  title:"GetMatchingGroup：找出候选卡",
+  goal:"逐个读懂第一次较长的Duel查询调用。",
+  text:`
+    <p><code>Duel.GetMatchingGroup</code> 取得搜索范围中符合filter的卡片集合。</p>
+    <p>本课使用六个参数：</p>
+    <p>①筛选函数；②参照玩家；③参照玩家区域；
+    ④另一侧区域；⑤之外？注意：本课实际是<strong>第五个参数排除对象</strong>。
+    为避免数错，请直接对照下面的完整五项列表。</p>
+    <p><code>s.filter</code> → 筛选函数；
+    <code>tp</code> → 参照玩家；
+    <code>LOCATION_MZONE</code> → 己方区域；
+    <code>0</code> → 对方区域；
+    <code>nil</code> → 本例没有要排除的卡片。</p>
+    <p><strong>本例一共五个参数。</strong>
+    函数还支持后续额外筛选参数，本阶段不使用。</p>
+    <p>传入的是 <code>s.filter</code> 函数值，而不是立即调用 <code>s.filter()</code>。</p>`,
+  example:`local g=Duel.GetMatchingGroup(
+    s.filter,
+    tp,
+    LOCATION_MZONE,
+    0,
+    nil
+)`,
+  takeaway:"先看范围，再看filter；查询得到集合，不代表已经选择效果对象。",
+  steps:[
+    {code:"tp,LOCATION_MZONE,0",
+     caption:"从tp一侧怪兽区寻找候选卡。这里用两张卡示意。",
+     fields:[["候选A","己方表侧怪兽"],["候选B","己方里侧怪兽"]]},
+    {code:"s.filter",
+     caption:"本例filter只要求表侧。",
+     fields:[["A返回","true"],["B返回","false"]]},
+    {code:"local g=Duel.GetMatchingGroup(s.filter,tp,LOCATION_MZONE,0,nil)",
+     caption:"g得到包含A的Group。卡片没有移动，也没有被选为效果对象。",
+     fields:[["集合内容","A"],["实际移动卡片","没有"],["取对象","没有"]]}
+  ],
+  question:"GetMatchingGroup查询成功后，卡片已经被选作效果对象了吗？",
+  options:["是，查到就等于取对象","不是，它只是获取匹配集合","只有数量为1时自动取对象"],
+  correct:1,
+  explanation:"查询集合与取对象是不同操作。后续会单独学习SelectTarget。",
+  prompt:"填写查询自己怪兽区中符合s.filter的卡片集合的表达式。",
+  template:"local g=____",
+  answer:"Duel.GetMatchingGroup(s.filter,tp,LOCATION_MZONE,0,nil)",
+  hint:"五个参数：函数值、玩家、己方范围、对方范围、排除对象。"
+},
+{
+  id:"group-get-count",
+  title:"GetCount：集合有几张卡",
+  goal:"认识Group，避免把它当普通Lua数组。",
+  text:`
+    <p><code>GetMatchingGroup</code> 返回引擎的 <strong>Group对象</strong>。</p>
+    <p>它不是一张Card，也不是普通的Lua数组。</p>
+    <p>使用 <code>g:GetCount()</code> 取得包含的卡片数量。</p>
+    <p>没有匹配卡时得到空Group，数量为0，不是因为没有卡就返回nil。</p>
+    <p>因此不能用 <code>if g then</code> 代替“是否有卡”的数量检查。</p>`,
+  example:`local count=g:GetCount()
+
+if g:GetCount()>0 then
+    -- 找到了至少一张卡
+end`,
+  takeaway:"空Group仍然是对象。判断有没有卡，要检查数量。",
+  steps:[
+    {code:"g:GetCount()",
+     caption:"Group里有A、B两张卡。",
+     fields:[["Group内容","A、B"],["返回数字","2"]]},
+    {code:"g:GetCount()",
+     caption:"没有符合条件的卡，返回的是空集合的数量。",
+     fields:[["Group内容","空"],["返回数字","0"],["g是nil吗","不是"]]},
+    {code:"if g:GetCount()>0 then",
+     caption:"这才是在检查集合是否包含卡片。",
+     fields:[["数量","0"],["条件结果","false"]]}
+  ],
+  question:"空Group应该如何检查是否包含至少一张卡？",
+  options:["if g then","if g:GetCount()>0 then","if g==true then"],
+  correct:1,
+  explanation:"Group对象存在不代表内部有卡。GetCount返回实际数量。",
+  prompt:"填写取得Group g中卡片数量的表达式。",
+  template:"local count=____",
+  answer:"g:GetCount()",
+  hint:"使用Group的方法GetCount，不要在本课把它写成#普通数组。"
+},
+{
+  id:"integrated-filter-query",
+  title:"综合：自己场上的表侧怪兽",
+  goal:"将筛选、搜索范围与数量读取串联。",
+  text:`
+    <p>现在目标很明确：<strong>找出tp一侧怪兽区的表侧卡片，并取得数量。</strong></p>
+    <p>区域条件已由GetMatchingGroup的区域参数限定，
+    因此本例filter只需再检查IsFaceup。</p>
+    <p>不必为了“看起来更完整”而在filter里重复全部区域判断。</p>
+    <p>下面是<strong>在合适回调中使用的查询片段</strong>，
+    不是完整卡片脚本。s应来自GetID，tp应由相应回调提供。</p>
+    <p>在真实效果里，查询应放在哪个回调阶段取决于用途，
+    不能把需要tp的片段直接随意粘贴到脚本顶层。</p>`,
+  example:integratedAnswer,
+  takeaway:"范围负责在哪里找，filter负责保留谁，Group负责装结果。",
+  steps:[
+    {code:"function s.filter(c)\n    return c:IsFaceup()\nend",
+     caption:"先定义筛选函数，本身还没发起查询。",
+     fields:[["筛选条件","表侧"],["是否执行查询","没有"]]},
+    {code:"Duel.GetMatchingGroup(s.filter,tp,LOCATION_MZONE,0,nil)",
+     caption:"假设己方怪兽区有A表侧、B里侧，只有A进入结果。",
+     fields:[["候选","A、B"],["结果","A"]]},
+    {code:"local count=g:GetCount()",
+     caption:"取得结果数量。仍未移动、破坏或选对象。",
+     fields:[["count","1"],["后续处理","本阶段尚未执行"]]}
+  ],
+  question:"本例为什么filter只写IsFaceup，而不再检查IsLocation？",
+  options:[
+    "因为IsLocation不能放进函数",
+    "因为查询范围已经限定在怪兽区",
+    "因为IsFaceup能自动判断是哪位玩家"
+  ],
+  correct:1,
+  explanation:"查询API先限定候选范围，filter只需补充本例要求的表侧条件。",
+  prompt:"补全三处空缺。练习按片段展示，假设s和tp由正确上下文提供。",
+  template:"受限骨架检查，不是完整卡片脚本，也不执行任意Lua。",
+  full:true,
+  starter:`function s.filter(c)
+    return ____
+end
+
+local g=____
+local count=____`,
+  answer:integratedAnswer,
+  hint:"依次补：表侧判断、GetMatchingGroup查询、Group数量读取。"
+}
+]
+};
+
+/* 修正课程文案：保持参数数量准确且不引入无关说明。 */
+STAGE.lessons.find(l=>l.id==="get-matching-group").text=`
+  <p><code>Duel.GetMatchingGroup</code> 取得搜索范围中符合filter的卡片集合。</p>
+  <p>本例一共使用<strong>五个参数</strong>：</p>
+  <p>① <code>s.filter</code>：筛选函数；<br>
+  ② <code>tp</code>：参照玩家；<br>
+  ③ <code>LOCATION_MZONE</code>：参照玩家一侧的搜索区域；<br>
+  ④ <code>0</code>：另一侧不搜索；<br>
+  ⑤ <code>nil</code>：本例没有要排除的卡片。</p>
+  <p>API还可以接收后续额外筛选参数，本阶段不使用。</p>
+  <p>传入的是 <code>s.filter</code> 函数值，
+  不是立即调用 <code>s.filter()</code>。</p>
+  <p>结果是Group集合，不是实际选定的效果对象。</p>`;
+
+
+/* ==================================================
+   B. 通用页面与记录管理
+   未来可独立移入 assets/app.js
+   ================================================== */
+
+const $=id=>document.getElementById(id);
+const lessons=STAGE.lessons;
+
+function esc(value){
+  return String(value).replace(/[&<>"']/g,c=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  })[c]);
+}
+function box(title,fields){
+  return `<div class="object"><b>${esc(title)}</b><div class="fields">${
+    fields.map(([k,v])=>
+      `<span>${esc(k)}</span><span>${esc(v)}</span>`
+    ).join("")
+  }</div></div>`;
+}
+
+const KEY="ygo-learning:"+STAGE.id+":v1";
+
+function emptyState(){
+  return {
+    schemaVersion:1,
+    stageId:STAGE.id,
+    currentLessonId:lessons[0].id,
+    records:{}
+  };
+}
+
+function sanitizeState(raw){
+  if(!raw || typeof raw!=="object" ||
+    raw.stageId!==STAGE.id || raw.schemaVersion!==1){
+    throw new Error("文件不是本阶段兼容的学习记录。");
+  }
+  const clean=emptyState();
+  if(lessons.some(l=>l.id===raw.currentLessonId)){
+    clean.currentLessonId=raw.currentLessonId;
+  }
+  for(const l of lessons){
+    const r=raw.records?.[l.id];
+    if(!r || typeof r!=="object")continue;
+    clean.records[l.id]={
+      step:Number.isInteger(r.step)&&r.step>=0&&r.step<l.steps.length?r.step:0,
+      observed:r.observed===true,
+      quiz:r.quiz===true,
+      exercise:r.exercise===true,
+      draft:typeof r.draft==="string"?r.draft.slice(0,50000):null
+    };
+  }
+  return clean;
+}
+
+let state=emptyState();
+
+try{
+  const saved=localStorage.getItem(KEY);
+  if(saved)state=sanitizeState(JSON.parse(saved));
+}catch{
+  $("storageNotice").textContent="原记录无法读取，已开启新的本次学习记录。";
+}
+
+function currentIndex(){
+  return lessons.findIndex(l=>l.id===state.currentLessonId);
+}
+function currentLesson(){
+  return lessons[currentIndex()];
+}
+function record(id=state.currentLessonId){
+  if(!state.records[id]){
+    state.records[id]={
+      step:0,observed:false,quiz:false,exercise:false,draft:null
+    };
+  }
+  return state.records[id];
+}
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(state));}
+  catch{
+    $("storageNotice").textContent="浏览器无法保存记录，可使用导出按钮备份。";
+  }
+}
+function complete(id){
+  const r=record(id);
+  return r.observed&&r.quiz&&r.exercise;
+}
+
+function refresh(){
+  $("nav").replaceChildren();
+  lessons.forEach((l,i)=>{
+    const b=document.createElement("button");
+    const active=l.id===state.currentLessonId;
+    b.className=active?"active":"";
+    if(active)b.setAttribute("aria-current","step");
+    b.innerHTML=
+      `<span class="num">${STAGE.startNumber+i}</span>`+
+      `<span>${esc(l.title)}</span>`+
+      `<span class="tick">${complete(l.id)?"✓":""}</span>`;
+    b.onclick=()=>openLesson(l.id);
+    $("nav").appendChild(b);
+  });
+
+  const count=lessons.filter(l=>complete(l.id)).length;
+  $("progressText").textContent=`${count} / ${lessons.length}`;
+  $("progressBar").style.width=`${count/lessons.length*100}%`;
+
+  const r=record();
+  $("checklist").innerHTML=[
+    [r.observed,"看完全部观察步骤"],
+    [r.quiz,"答对理解题"],
+    [r.exercise,"完成本课小练习"]
+  ].map(([ok,text])=>
+    `<div class="${ok?"goodText":"muted"}">${ok?"✓":"○"} ${text}</div>`
+  ).join("");
+
+  $("lessonStatus").textContent=
+    complete(state.currentLessonId)?"✓ 本课已完成":"按自己的节奏慢慢来";
+}
+
+function renderStep(){
+  const l=currentLesson(),r=record(),s=l.steps[r.step];
+  $("visual").innerHTML=
+    `<div class="visualTitle">教学场景 · 第 ${r.step+1} 步</div>`+
+    box("当前状态",s.fields);
+  $("stepCode").textContent=s.code;
+  $("stepCaption").textContent=s.caption;
+  $("stepCount").textContent=`观察进度：${r.step+1} / ${l.steps.length}`;
+  $("previousStep").disabled=r.step===0;
+  $("nextStep").disabled=r.step===l.steps.length-1;
+  $("nextStep").textContent=r.step===l.steps.length-1?
+    "观察完毕 ✓":"观察下一步 →";
+
+  if(r.step===l.steps.length-1)r.observed=true;
+  save();refresh();
+}
+
+function renderQuiz(){
+  const l=currentLesson(),r=record();
+  $("question").textContent=l.question;
+  $("options").replaceChildren();
+
+  l.options.forEach((text,i)=>{
+    const b=document.createElement("button");
+    b.className="option"+(r.quiz&&i===l.correct?" good":"");
+    b.textContent=String.fromCharCode(65+i)+". "+text;
+    b.onclick=()=>{
+      document.querySelectorAll("#options .option").forEach(x=>{
+        x.classList.remove("good","bad");
+      });
+      const ok=i===l.correct;
+      b.classList.add(ok?"good":"bad");
+      $("quizFeedback").className="feedback "+(ok?"goodText":"badText");
+      $("quizFeedback").textContent=ok?
+        "正确！"+l.explanation:
+        "还不对，回看知识点后可以继续选择，不扣分。";
+      if(ok){r.quiz=true;save();refresh();}
+    };
+    $("options").appendChild(b);
+  });
+
+  $("quizFeedback").className="feedback"+(r.quiz?" goodText":"");
+  $("quizFeedback").textContent=r.quiz?"✓ 已答对。"+l.explanation:"";
+}
+
+function openLesson(id){
+  if(!lessons.some(l=>l.id===id))return;
+  state.currentLessonId=id;
+  const l=currentLesson(),r=record(),index=currentIndex();
+
+  $("lessonTag").textContent=`第四阶段 · 第 ${STAGE.startNumber+index} 课`;
+  $("lessonTitle").textContent=l.title;
+  $("lessonGoal").textContent=l.goal;
+  $("lessonText").innerHTML=l.text;
+  $("example").textContent=l.example;
+  $("takeaway").textContent="记住这一句："+l.takeaway;
+
+  $("exercisePrompt").textContent=l.prompt;
+  $("exerciseTemplate").textContent=l.template;
+  $("exerciseHint").textContent=l.hint;
+  $("exerciseSolution").textContent=l.answer;
+
+  $("answerInput").hidden=!!l.full;
+  $("codeInput").hidden=!l.full;
+  $("inputLabel").htmlFor=l.full?"codeInput":"answerInput";
+  $("inputLabel").textContent=l.full?"补全下面的代码":"在下方填写空缺部分";
+
+  const input=l.full?$("codeInput"):$("answerInput");
+  input.value=typeof r.draft==="string"?r.draft:(l.starter||"");
+  $("exerciseFeedback").className="feedback"+(r.exercise?" goodText":"");
+  $("exerciseFeedback").textContent=r.exercise?
+    "✓ 已通过本课练习，可以再次复习。":"";
+
+  $("hintDetails").open=false;
+  $("solutionDetails").open=false;
+  $("previousLesson").disabled=index===0;
+  $("nextLesson").disabled=index===lessons.length-1;
+  $("nextLesson").textContent=index===lessons.length-1?
+    "本阶段最后一课":"下一课 →";
+
+  renderQuiz();renderStep();save();
+}
+
+$("previousStep").onclick=()=>{
+  if(record().step>0){record().step--;renderStep();}
+};
+$("nextStep").onclick=()=>{
+  if(record().step<currentLesson().steps.length-1){
+    record().step++;renderStep();
+  }
+};
+$("previousLesson").onclick=()=>{
+  const i=currentIndex();
+  if(i>0)openLesson(lessons[i-1].id);
+  window.scrollTo({top:0,behavior:"smooth"});
+};
+$("nextLesson").onclick=()=>{
+  const i=currentIndex();
+  if(i<lessons.length-1)openLesson(lessons[i+1].id);
+  window.scrollTo({top:0,behavior:"smooth"});
+};
+
+function norm(s){
+  return s.trim().replace(/\s+/g,"").replace(/;+$/,"");
+}
+function codeLines(s){
+  return s.split(/\r?\n/)
+    .map(line=>line.replace(/--.*$/,"").trim())
+    .filter(Boolean)
+    .map(norm);
+}
+function checkExercise(){
+  const l=currentLesson(),r=record();
+  const value=(l.full?$("codeInput"):$("answerInput")).value;
+  r.draft=value;
+  let ok=false,message="";
+
+  if(l.full){
+    const actual=codeLines(value),expected=codeLines(l.answer);
+    const mismatch=expected.findIndex((line,i)=>line!==actual[i]);
+    ok=mismatch===-1&&actual.length===expected.length;
+    message=mismatch!==-1?
+      `有效代码第 ${mismatch+1} 行仍需调整。检查占位符、大小写和参数位置。`:
+      "存在额外代码。本题只检查给定骨架。";
+  }else{
+    ok=norm(value)===norm(l.answer);
+  }
+
+  $("exerciseFeedback").className="feedback "+(ok?"goodText":"badText");
+  $("exerciseFeedback").textContent=ok?
+    (l.full?
+      "✓ 骨架正确！这是结构检查，不是引擎执行结果。":
+      "✓ 正确！再想想它是在检查单张卡，还是取得卡片集合。"):
+    (message||"暂时不匹配。检查大小写、点号、冒号，并只填写题目要求的部分。");
+
+  if(ok)r.exercise=true;
+  save();refresh();
+}
+
+$("checkAnswer").onclick=checkExercise;
+$("resetAnswer").onclick=()=>{
+  const l=currentLesson(),input=l.full?$("codeInput"):$("answerInput");
+  input.value=l.starter||"";
+  record().draft=input.value;save();
+  $("exerciseFeedback").className="feedback muted";
+  $("exerciseFeedback").textContent="输入已重置，已有通过记录保留。";
+};
+["answerInput","codeInput"].forEach(id=>{
+  $(id).addEventListener("input",e=>{
+    record().draft=e.target.value;save();
+  });
+});
+$("answerInput").addEventListener("keydown",e=>{
+  if(e.key==="Enter")checkExercise();
+});
+$("codeInput").addEventListener("keydown",e=>{
+  if(e.key==="Tab"){
+    e.preventDefault();
+    e.target.setRangeText("    ",e.target.selectionStart,e.target.selectionEnd,"end");
+    e.target.dispatchEvent(new Event("input"));
+  }
+  if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){
+    e.preventDefault();checkExercise();
+  }
+});
+
+/* 导入/导出：只接受本阶段记录，不把导入数据当HTML执行。 */
+$("exportProgress").onclick=()=>{
+  save();
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="ygo-stage04-progress.json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  $("storageNotice").textContent="已请求下载本阶段学习记录。";
+};
+
+$("importProgress").onclick=()=>$("importFile").click();
+$("importFile").addEventListener("change",async e=>{
+  const file=e.target.files[0];
+  if(!file)return;
+  try{
+    if(file.size>1024*1024)throw new Error("文件过大，请选择本阶段导出的JSON记录。");
+    const imported=sanitizeState(JSON.parse(await file.text()));
+    if(!confirm("用导入文件替换当前第四阶段记录？建议先导出当前记录。"))return;
+    state=imported;
+    save();openLesson(state.currentLessonId);
+    $("storageNotice").textContent="学习记录已导入。";
+  }catch(error){
+    $("storageNotice").textContent="导入失败："+error.message;
+  }finally{
+    e.target.value="";
+  }
+});
+
+$("clearProgress").onclick=()=>{
+  if(!confirm("清空第四阶段记录和草稿？其他阶段不受影响。"))return;
+  state=emptyState();
+  save();openLesson(state.currentLessonId);
+};
+
+
+/* ==================================================
+   C. 固定规则筛选实验台
+   未来可独立移入 labs/filtering.js
+   ================================================== */
+
+const initialCards=[
+  {id:"A",name:"训练战士A",side:0,location:"MZONE",faceup:true},
+  {id:"B",name:"训练战士B",side:0,location:"MZONE",faceup:false},
+  {id:"C",name:"训练战士C",side:1,location:"MZONE",faceup:true},
+  {id:"D",name:"训练战士D",side:0,location:"HAND",faceup:true}
+];
+
+let labCards=initialCards.map(c=>({...c}));
+
+function evaluateCard(c){
+  const player=Number($("labPlayer").value);
+  const scope=$("labScope").value;
+  const requireFaceup=$("labFaceup").checked;
+  const own=c.side===player;
+
+  const allowedSide=
+    scope==="both" ||
+    (scope==="own"&&own) ||
+    (scope==="opponent"&&!own);
+
+  if(!allowedSide){
+    return {match:false,reason:"不在本次搜索的一侧，未进入候选范围。"};
+  }
+  if(c.location!=="MZONE"){
+    return {match:false,reason:"不在怪兽区，未进入候选范围。"};
+  }
+  if(requireFaceup&&!c.faceup){
+    return {match:false,reason:"进入候选范围，但IsFaceup返回false，被filter排除。"};
+  }
+  return {
+    match:true,
+    reason:requireFaceup?
+      "在搜索范围内，IsFaceup返回true，进入结果Group。":
+      "在搜索范围内，本次filter恒为true，进入结果Group。"
+  };
+}
+
+function createSelect(labelText,value,choices,onchange){
+  const label=document.createElement("label");
+  label.appendChild(document.createTextNode(labelText));
+  const select=document.createElement("select");
+
+  choices.forEach(([v,text])=>{
+    const option=document.createElement("option");
+    option.value=v;
+    option.textContent=text;
+    select.appendChild(option);
+  });
+
+  select.value=String(value);
+  select.addEventListener("change",()=>onchange(select.value));
+  label.appendChild(select);
+  return label;
+}
+
+function renderLabCards(){
+  $("labCards").replaceChildren();
+
+  labCards.forEach(c=>{
+    const div=document.createElement("div");
+    div.className="labCard";
+    div.dataset.cardId=c.id;
+
+    const title=document.createElement("h3");
+    title.textContent=c.name;
+    div.appendChild(title);
+
+    div.appendChild(createSelect(
+      "所在一侧",c.side,
+      [["0","玩家0一侧"],["1","玩家1一侧"]],
+      value=>{c.side=Number(value);refreshLabResults();}
+    ));
+
+    div.appendChild(createSelect(
+      "所在区域",c.location,
+      [["MZONE","怪兽区"],["HAND","手牌"],["GRAVE","墓地"]],
+      value=>{c.location=value;refreshLabResults();}
+    ));
+
+    div.appendChild(createSelect(
+      "怪兽区中的表示",c.faceup?"up":"down",
+      [["up","表侧"],["down","里侧"]],
+      value=>{c.faceup=value==="up";refreshLabResults();}
+    ));
+
+    const reason=document.createElement("div");
+    reason.className="reason";
+    div.appendChild(reason);
+    $("labCards").appendChild(div);
+  });
+
+  refreshLabResults();
+}
+
+function refreshLabResults(){
+  const scope=$("labScope").value;
+  const faceup=$("labFaceup").checked;
+  const player=Number($("labPlayer").value);
+  const matched=[];
+
+  labCards.forEach(c=>{
+    const result=evaluateCard(c);
+    if(result.match)matched.push(c);
+
+    const div=$("labCards").querySelector(`[data-card-id="${c.id}"]`);
+    if(div){
+      div.classList.toggle("match",result.match);
+      div.querySelector(".reason").textContent=
+        (result.match?"✓ ":"○ ")+result.reason;
+    }
+  });
+
+  const own=scope==="opponent"?"0":"LOCATION_MZONE";
+  const other=scope==="own"?"0":"LOCATION_MZONE";
+
+  $("labCode").textContent=
+`-- 场景假设：tp=${player}，s由正确脚本上下文提供
+function s.filter(c)
+    return ${faceup?"c:IsFaceup()":"true"}
+end
+
+local g=Duel.GetMatchingGroup(s.filter,tp,${own},${other},nil)
+local count=g:GetCount()
+
+-- 这里只查询，不选对象、不破坏、不移动卡片`;
+
+  $("labResult").innerHTML=box("模拟查询结果",[
+    ["参照玩家tp",player],
+    ["Group内容",matched.length?matched.map(c=>c.name).join("、"):"空Group"],
+    ["g:GetCount()",matched.length],
+    ["g是否为nil","否，空集合也是Group"],
+    ["是否已经取对象","否"],
+    ["是否改变卡片位置","否"]
+  ]);
+}
+
+["labPlayer","labScope","labFaceup"].forEach(id=>{
+  $(id).addEventListener("change",refreshLabResults);
+});
+
+$("resetLab").onclick=()=>{
+  labCards=initialCards.map(c=>({...c}));
+  $("labPlayer").value="0";
+  $("labScope").value="own";
+  $("labFaceup").checked=true;
+  renderLabCards();
+};
+
+
+/* ---------- 术语小字典 ---------- */
+const terms=[
+  ["LOCATION_MZONE","怪兽区常量，不包含玩家编号。"],
+  ["LOCATION_HAND / GRAVE / DECK","手牌、墓地、主卡组区域常量。"],
+  ["c:IsLocation(location)","检查卡片是否位于指定区域，不移动卡片。"],
+  ["c:IsFaceup()","检查是否表侧。本课表侧攻击与表侧守备都返回true。"],
+  ["filter","筛选函数。本例接收候选卡并返回是否保留。"],
+  ["filter中的c","当前候选卡，不固定等于发动效果的卡。"],
+  ["tp,l1,l2","参照玩家及相对双方搜索区域。区域参数中的0表示不搜索该侧。"],
+  ["Duel.GetMatchingGroup","取得匹配卡片的Group，不等于选择效果对象。"],
+  ["nil排除参数","本例不指定需要排除的卡片。"],
+  ["Group","引擎卡片集合，不是单张Card，也不是普通Lua数组。"],
+  ["g:GetCount()","读取集合数量；空Group返回0。"]
+];
+
+$("glossary").innerHTML=terms.map(([name,text])=>
+  `<div style="margin-top:14px">
+    <strong style="color:var(--blue)">${esc(name)}</strong>
+    <div class="muted">${esc(text)}</div>
+  </div>`
+).join("");
+
+openLesson(state.currentLessonId);
+renderLabCards();
+</script>
+<script src="progress-sync.js"></script>
+</body>
+</html>
