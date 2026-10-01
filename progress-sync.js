@@ -52,7 +52,9 @@
   function addHomeButton() {
     if (document.getElementById("homeLink")) return;
     const button = document.createElement("a");
-    button.id = "homeLink"; button.href = "index.html"; button.textContent = "\u8fd4\u56de\u4e3b\u9875";
+    button.id = "homeLink";
+    button.href = location.pathname.includes("/YGO-Lua-课程/") ? "../index.html" : "index.html";
+    button.textContent = "\u8fd4\u56de\u4e3b\u9875";
     button.style.cssText = "position:fixed;top:16px;right:18px;z-index:9999;padding:8px 14px;border:1px solid #2a3c5d;border-radius:8px;background:#18263f;color:#e6eeff;text-decoration:none;font:14px/1.4 system-ui,Microsoft YaHei,sans-serif;";
     document.body.appendChild(button);
   }

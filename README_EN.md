@@ -10,13 +10,7 @@ A local, browser-based course collection for learning Yu-Gi-Oh! card effect scri
 | --- | --- |
 | `index.html` | Home page, course cards, overall progress, and course ordering |
 | `Lua-交互式学习平台.html` | Interactive Lua fundamentals course |
-| `YGO-Lua-从第一张卡开始.html` | Stage 1: card scripting fundamentals |
-| `YGO-Lua-第二阶段发动与处理.html` | Stage 2: activation and resolution |
-| `YGO-Lua-第三阶段代价与发动.html` | Stage 3: costs and activation |
-| `YGO-Lua-第四阶段区域与筛选.html` | Stage 4: locations and filters |
-| `YGO-Lua-第五阶段取对象与处理.html` | Stage 5: targeting and resolution |
-| `YGO-Lua-第六阶段属性筛选.html` | Stage 6: property filters |
-| `YGO-Lua-第七阶段卡组检索.html` | Stage 7: deck searching |
+| `YGO-Lua-课程/` | Stage 1 through Stage 7 course pages |
 | `YGO-效果脚本实验室.html` | Effect scripting lab and experiments |
 | `progress-sync.js` | Publishes course progress summaries to the home page |
 | `YGO-Lua-课程代码规范.md` | Page structure, progress data, and coding conventions |
